@@ -260,6 +260,22 @@ public class GCSToBQLoadRunnable implements Runnable {
     }
   }
 
+  private List<BlobId> archiveBlobs(List<BlobId> blobIdsToDelete) {
+    List<BlobId> resultList = new ArrayList<>();
+    for (BlobId blobId: blobIdsToDelete){
+      if(!moveBlob(blobId)) {
+        resultList.add(blobId);
+      }
+    }
+    return resultList;
+  }
+
+  private boolean moveBlob(BlobId blobId){
+    String bucketName = bucket.getName();
+    Blob blob = bucket.getStorage().get(blobId);
+    return blob.copyTo(bucketName, "archive/" + blob.getName()).isDone();
+  }
+
   /**
    * Delete deletable blobs.
    */
@@ -278,6 +294,16 @@ public class GCSToBQLoadRunnable implements Runnable {
     logger.info("Attempting to delete {} blobs", numberOfBlobs);
 
     try {
+      // Archive the blobs
+      List<BlobId> archiveResults = archiveBlobs(blobIdsToDelete);
+      int archiveFailCount = archiveResults.size();
+      if(archiveFailCount == 0){
+        logger.info("Successfully archived all blobs");
+      } else {
+        for(BlobId blobId: archiveResults){
+          logger.info("Failed to archive {}", blobId.getName());
+        }
+      }
       // Issue a batch delete api call
       List<Boolean> resultList = bucket.getStorage().delete(blobIdsToDelete);
 
