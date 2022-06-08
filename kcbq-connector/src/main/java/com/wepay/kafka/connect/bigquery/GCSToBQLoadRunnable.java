@@ -27,23 +27,15 @@ import com.google.cloud.bigquery.Job;
 import com.google.cloud.bigquery.JobInfo;
 import com.google.cloud.bigquery.LoadJobConfiguration;
 import com.google.cloud.bigquery.TableId;
-import com.google.cloud.storage.Blob;
-import com.google.cloud.storage.BlobId;
-import com.google.cloud.storage.Bucket;
-import com.google.cloud.storage.StorageException;
+import com.google.cloud.storage.*;
 
 import com.wepay.kafka.connect.bigquery.write.row.GCSToBQWriter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -60,6 +52,7 @@ public class GCSToBQLoadRunnable implements Runnable {
 
   private final BigQuery bigQuery;
   private final Bucket bucket;
+  private final String directoryPrefix;
   private final Map<Job, List<BlobId>> activeJobs;
   private final Set<BlobId> claimedBlobIds;
   private final Set<BlobId> deletableBlobIds;
@@ -81,9 +74,10 @@ public class GCSToBQLoadRunnable implements Runnable {
    * @param bigQuery the {@link BigQuery} instance.
    * @param bucket the the GCS bucket to read from.
    */
-  public GCSToBQLoadRunnable(BigQuery bigQuery, Bucket bucket) {
+  public GCSToBQLoadRunnable(BigQuery bigQuery, Bucket bucket, String directoryPrefix) {
     this.bigQuery = bigQuery;
     this.bucket = bucket;
+    this.directoryPrefix = directoryPrefix;
     this.activeJobs = new HashMap<>();
     this.claimedBlobIds = new HashSet<>();
     this.deletableBlobIds = new HashSet<>();
@@ -103,7 +97,7 @@ public class GCSToBQLoadRunnable implements Runnable {
     Map<TableId, Long> tableToCurrentLoadSize = new HashMap<>();
 
     logger.trace("Starting GCS bucket list");
-    Page<Blob> list = bucket.list();
+    Page<Blob> list = bucket.list(Storage.BlobListOption.prefix(directoryPrefix));
     logger.trace("Finished GCS bucket list");
 
     for (Blob blob : list.iterateAll()) {
@@ -273,7 +267,17 @@ public class GCSToBQLoadRunnable implements Runnable {
   private boolean moveBlob(BlobId blobId){
     String bucketName = bucket.getName();
     Blob blob = bucket.getStorage().get(blobId);
-    return blob.copyTo(bucketName, "archive/" + blob.getName()).isDone();
+    String blobName = blob.getName();
+    String directory = blobName.substring(0, blobName.indexOf('/'));
+    String jsonName = blobName.substring(blobName.lastIndexOf('/') + 1);
+    String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+    String targetName = String.format("archive/%s/dt=%s/%s",
+            directory,
+            date,
+            jsonName
+    );
+
+    return blob.copyTo(bucketName, targetName).isDone();
   }
 
   /**
