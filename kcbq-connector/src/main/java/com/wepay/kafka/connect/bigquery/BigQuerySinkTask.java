@@ -512,22 +512,22 @@ public class BigQuerySinkTask extends SinkTask {
     String directoryPrefix = config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
     Storage gcs = getGcs();
     // get the bucket, or create it if it does not exist.
-    Bucket bucket = gcs.get(bucketName);
-    if (bucket == null) {
-      // todo here is where we /could/ set a retention policy for the bucket,
-      // but for now I don't think we want to do that.
-      if (config.getBoolean(BigQuerySinkConfig.AUTO_CREATE_BUCKET_CONFIG)) {
-        BucketInfo bucketInfo = BucketInfo.of(bucketName);
-        bucket = gcs.create(bucketInfo);
-      } else {
-        throw new ConnectException(String.format(
-            "Bucket '%s' does not exist; Create the bucket manually, or set '%s' to true",
-            bucketName,
-            BigQuerySinkConfig.AUTO_CREATE_BUCKET_CONFIG
-        ));
-      }
-    }
-    GCSToBQLoadRunnable loadRunnable = new GCSToBQLoadRunnable(getBigQuery(), bucket, directoryPrefix);
+//    Bucket bucket = gcs.get(bucketName);
+//    if (bucket == null) {
+//      // todo here is where we /could/ set a retention policy for the bucket,
+//      // but for now I don't think we want to do that.
+//      if (config.getBoolean(BigQuerySinkConfig.AUTO_CREATE_BUCKET_CONFIG)) {
+//        BucketInfo bucketInfo = BucketInfo.of(bucketName);
+//        bucket = gcs.create(bucketInfo);
+//      } else {
+//        throw new ConnectException(String.format(
+//            "Bucket '%s' does not exist; Create the bucket manually, or set '%s' to true",
+//            bucketName,
+//            BigQuerySinkConfig.AUTO_CREATE_BUCKET_CONFIG
+//        ));
+//      }
+//    }
+    GCSToBQLoadRunnable loadRunnable = new GCSToBQLoadRunnable(getBigQuery(),gcs, config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG), directoryPrefix);
 
     int intervalSec = config.getInt(BigQuerySinkConfig.BATCH_LOAD_INTERVAL_SEC_CONFIG);
     loadExecutor.scheduleAtFixedRate(loadRunnable, intervalSec, intervalSec, TimeUnit.SECONDS);
