@@ -82,15 +82,15 @@ public class GcsBucketValidator extends MultiPropertyValidator<BigQuerySinkConfi
       return Optional.empty();
     }
 
-    Bucket bucket = gcs.get(bucketName);
-    if (bucket == null) {
-      return Optional.of(String.format(
-          "Automatic bucket creation is disabled but the GCS bucket %s does not exist. "
-              + "Please either manually create this table before restarting the connector or enable automatic bucket creation "
-              + "by the connector",
-          bucketName
-      ));
-    }
+//    Bucket bucket = gcs.get(bucketName);
+//    if (bucket == null) {
+//      return Optional.of(String.format(
+//          "Automatic bucket creation is disabled but the GCS bucket %s does not exist. "
+//              + "Please either manually create this table before restarting the connector or enable automatic bucket creation "
+//              + "by the connector",
+//          bucketName
+//      ));
+//    }
 
     return Optional.empty();
   }
