@@ -51,7 +51,8 @@ public class GCSToBQLoadRunnable implements Runnable {
   private static final Logger logger = LoggerFactory.getLogger(GCSToBQLoadRunnable.class);
 
   private final BigQuery bigQuery;
-  private final Bucket bucket;
+  private final Storage storage;
+  private final String bucket;
   private final String directoryPrefix;
   private final Map<Job, List<BlobId>> activeJobs;
   private final Set<BlobId> claimedBlobIds;
@@ -72,10 +73,12 @@ public class GCSToBQLoadRunnable implements Runnable {
   /**
    * Create a {@link GCSToBQLoadRunnable} with the given bigquery, bucket, and ms wait interval.
    * @param bigQuery the {@link BigQuery} instance.
+   * @param storage the {@link Storage} instance.
    * @param bucket the the GCS bucket to read from.
    */
-  public GCSToBQLoadRunnable(BigQuery bigQuery, Bucket bucket, String directoryPrefix) {
+  public GCSToBQLoadRunnable(BigQuery bigQuery, Storage storage, String bucket, String directoryPrefix) {
     this.bigQuery = bigQuery;
+    this.storage = storage;
     this.bucket = bucket;
     this.directoryPrefix = directoryPrefix;
     this.activeJobs = new HashMap<>();
@@ -97,7 +100,11 @@ public class GCSToBQLoadRunnable implements Runnable {
     Map<TableId, Long> tableToCurrentLoadSize = new HashMap<>();
 
     logger.trace("Starting GCS bucket list");
-    Page<Blob> list = bucket.list(Storage.BlobListOption.prefix(directoryPrefix));
+    Page<Blob> list = storage.list(
+            bucket,
+            Storage.BlobListOption.prefix(directoryPrefix)
+    );
+//    Page<Blob> list = bucket.list(Storage.BlobListOption.prefix(directoryPrefix));
     logger.trace("Finished GCS bucket list");
 
     for (Blob blob : list.iterateAll()) {
@@ -184,7 +191,7 @@ public class GCSToBQLoadRunnable implements Runnable {
   private Job triggerBigQueryLoadJob(TableId table, List<Blob> blobs) {
     List<String> uris = blobs.stream()
                              .map(b -> String.format(SOURCE_URI_FORMAT,
-                                                     bucket.getName(),
+                                                     bucket,
                                                      b.getName()))
                              .collect(Collectors.toList());
     // create job load configuration
@@ -265,8 +272,8 @@ public class GCSToBQLoadRunnable implements Runnable {
   }
 
   private boolean moveBlob(BlobId blobId){
-    String bucketName = bucket.getName();
-    Blob blob = bucket.getStorage().get(blobId);
+    String bucketName = bucket;
+    Blob blob = storage.get(blobId);
     String blobName = blob.getName();
     String directory = blobName.substring(0, blobName.indexOf('/'));
     String jsonName = blobName.substring(blobName.lastIndexOf('/') + 1);
@@ -309,7 +316,7 @@ public class GCSToBQLoadRunnable implements Runnable {
         }
       }
       // Issue a batch delete api call
-      List<Boolean> resultList = bucket.getStorage().delete(blobIdsToDelete);
+      List<Boolean> resultList = storage.delete(blobIdsToDelete);
 
       // Filter the blobs we couldn't delete from the list of deletable blobs
       for (int i = 0; i < numberOfBlobs; i++) {
