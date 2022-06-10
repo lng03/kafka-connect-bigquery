@@ -340,6 +340,9 @@ public class GCSToBQLoadRunnable implements Runnable {
                   failedDeletes);
     } catch (StorageException ex) {
       logger.warn("Storage exception while attempting to delete blobs", ex);
+    } catch (Exception e){
+      logger.error("Failed to delete because of {}", e.getMessage());
+      throw e;
     }
   }
 
