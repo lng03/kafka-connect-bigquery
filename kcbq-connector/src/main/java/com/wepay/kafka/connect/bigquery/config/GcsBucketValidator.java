@@ -67,21 +67,21 @@ public class GcsBucketValidator extends MultiPropertyValidator<BigQuerySinkConfi
 
   @VisibleForTesting
   Optional<String> doValidate(Storage gcs, BigQuerySinkConfig config) {
-    List<String> batchLoadedTopics = config.getList(ENABLE_BATCH_CONFIG);
-    if (batchLoadedTopics ==  null || batchLoadedTopics.isEmpty()) {
-      // Batch loading is disabled; no need to validate the GCS bucket
-      return Optional.empty();
-    }
-
-    String bucketName = config.getString(GCS_BUCKET_NAME_CONFIG);
-    if (bucketName == null || bucketName.trim().isEmpty()) {
-      return Optional.of("When GCS batch loading is enabled, a bucket must be provided");
-    }
-
-    if (config.getBoolean(AUTO_CREATE_BUCKET_CONFIG)) {
-      return Optional.empty();
-    }
-
+//    List<String> batchLoadedTopics = config.getList(ENABLE_BATCH_CONFIG);
+//    if (batchLoadedTopics ==  null || batchLoadedTopics.isEmpty()) {
+//      // Batch loading is disabled; no need to validate the GCS bucket
+//      return Optional.empty();
+//    }
+//
+//    String bucketName = config.getString(GCS_BUCKET_NAME_CONFIG);
+//    if (bucketName == null || bucketName.trim().isEmpty()) {
+//      return Optional.of("When GCS batch loading is enabled, a bucket must be provided");
+//    }
+//
+//    if (config.getBoolean(AUTO_CREATE_BUCKET_CONFIG)) {
+//      return Optional.empty();
+//    }
+//
 //    Bucket bucket = gcs.get(bucketName);
 //    if (bucket == null) {
 //      return Optional.of(String.format(
