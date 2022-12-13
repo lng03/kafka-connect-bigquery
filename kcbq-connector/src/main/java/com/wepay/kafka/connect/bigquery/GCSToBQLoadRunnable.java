@@ -340,7 +340,7 @@ public class GCSToBQLoadRunnable implements Runnable {
       successfulDeletes = numberOfBlobs - failedDeletes;
       deletableBlobIds.removeAll(blobIdsToDelete);
 
-      logger.info("Successfully deleted {} blobs; failed to delete {} blobs",
+      logger.debug("Successfully deleted {} blobs; failed to delete {} blobs",
                   successfulDeletes,
                   failedDeletes);
     } catch (StorageException ex) {
@@ -362,7 +362,11 @@ public class GCSToBQLoadRunnable implements Runnable {
       logger.trace("Finding new blobs to load into BQ");
       Map<TableId, List<Blob>> tablesToSourceURIs = getBlobsUpToLimit();
       logger.trace("Loading {} new blobs into BQ", tablesToSourceURIs.size());
-      triggerBigQueryLoadJobs(tablesToSourceURIs);
+      Map<Job, List<Blob>> jobsMap = triggerBigQueryLoadJobs(tablesToSourceURIs);
+      String jobIdString = jobsMap.keySet().stream()
+              .map(key -> key.getJobId().getJob())
+              .collect(Collectors.joining(", ", "[", "]"));
+      logger.debug("Submitting bq load job(s): {}", jobIdString);
       logger.trace("Finished BQ load run");
     } catch (Exception e) {
       logger.error("Uncaught error in BQ loader", e);
