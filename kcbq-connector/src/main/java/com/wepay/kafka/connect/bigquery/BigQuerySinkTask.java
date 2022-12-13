@@ -493,7 +493,7 @@ public class BigQuerySinkTask extends SinkTask {
 
       String tableName;
       String dataset = config.getString(BigQuerySinkConfig.DEFAULT_DATASET_CONFIG);
-      String[] smtReplacement = sLoadGCS.split("\\.");
+      String[] smtReplacement = sLoadGCS.split(":");
 
       if (smtReplacement.length == 2) {
         dataset = smtReplacement[0];
@@ -505,7 +505,7 @@ public class BigQuerySinkTask extends SinkTask {
                 "Incorrect regex replacement format in topic name '%s'. "
                         + "SMT replacement should either produce the <dataset>:<tableName> format "
                         + "or just the <tableName> format.",
-                "ERROR"
+                sLoadGCS
         ));
       }
 
