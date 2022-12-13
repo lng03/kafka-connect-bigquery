@@ -493,7 +493,7 @@ public class BigQuerySinkTask extends SinkTask {
 
       String tableName;
       String dataset = config.getString(BigQuerySinkConfig.DEFAULT_DATASET_CONFIG);
-      String[] smtReplacement = sLoadGCS.split("\\.");
+      String[] smtReplacement = sLoadGCS.split(":");
 
       if (smtReplacement.length == 2) {
         dataset = smtReplacement[0];
