@@ -303,21 +303,21 @@ public class GCSToBQLoadRunnable implements Runnable {
     int successfulDeletes = 0;
 
     if (numberOfBlobs == 0) {
-      logger.trace("No blobs to delete");
+      logger.info("No blobs to delete");
       return;
     }
 
-    logger.debug("Attempting to delete {} blobs", numberOfBlobs);
+    logger.info("Attempting to delete {} blobs", numberOfBlobs);
 
     try {
       // Archive the blobs
       List<BlobId> archiveResults = archiveBlobs(blobIdsToDelete);
       int archiveFailCount = archiveResults.size();
       if(archiveFailCount == 0){
-        logger.debug("Successfully archived all blobs");
+        logger.info("Successfully archived all blobs");
       } else {
         for(BlobId blobId: archiveResults){
-          logger.warn("Failed to archive {}", blobId.getName());
+          logger.info("Failed to archive {}", blobId.getName());
         }
       }
       // Issue a batch delete api call
@@ -340,7 +340,7 @@ public class GCSToBQLoadRunnable implements Runnable {
       successfulDeletes = numberOfBlobs - failedDeletes;
       deletableBlobIds.removeAll(blobIdsToDelete);
 
-      logger.debug("Successfully deleted {} blobs; failed to delete {} blobs",
+      logger.info("Successfully deleted {} blobs; failed to delete {} blobs",
                   successfulDeletes,
                   failedDeletes);
     } catch (StorageException ex) {
@@ -362,11 +362,7 @@ public class GCSToBQLoadRunnable implements Runnable {
       logger.trace("Finding new blobs to load into BQ");
       Map<TableId, List<Blob>> tablesToSourceURIs = getBlobsUpToLimit();
       logger.trace("Loading {} new blobs into BQ", tablesToSourceURIs.size());
-      Map<Job, List<Blob>> jobsMap = triggerBigQueryLoadJobs(tablesToSourceURIs);
-      String jobIdString = jobsMap.keySet().stream()
-              .map(key -> key.getJobId().getJob())
-              .collect(Collectors.joining(", ", "[", "]"));
-      logger.debug("Submitting bq load job(s): {}", jobIdString);
+      triggerBigQueryLoadJobs(tablesToSourceURIs);
       logger.trace("Finished BQ load run");
     } catch (Exception e) {
       logger.error("Uncaught error in BQ loader", e);
