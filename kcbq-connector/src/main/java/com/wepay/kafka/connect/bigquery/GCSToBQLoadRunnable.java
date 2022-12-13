@@ -303,21 +303,21 @@ public class GCSToBQLoadRunnable implements Runnable {
     int successfulDeletes = 0;
 
     if (numberOfBlobs == 0) {
-      logger.info("No blobs to delete");
+      logger.trace("No blobs to delete");
       return;
     }
 
-    logger.info("Attempting to delete {} blobs", numberOfBlobs);
+    logger.debug("Attempting to delete {} blobs", numberOfBlobs);
 
     try {
       // Archive the blobs
       List<BlobId> archiveResults = archiveBlobs(blobIdsToDelete);
       int archiveFailCount = archiveResults.size();
       if(archiveFailCount == 0){
-        logger.info("Successfully archived all blobs");
+        logger.debug("Successfully archived all blobs");
       } else {
         for(BlobId blobId: archiveResults){
-          logger.info("Failed to archive {}", blobId.getName());
+          logger.warn("Failed to archive {}", blobId.getName());
         }
       }
       // Issue a batch delete api call
