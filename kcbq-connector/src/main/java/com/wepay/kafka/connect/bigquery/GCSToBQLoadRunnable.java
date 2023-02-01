@@ -102,7 +102,7 @@ public class GCSToBQLoadRunnable implements Runnable {
             Storage.BlobListOption.prefix(directoryPrefix)
     );
 //    Page<Blob> list = bucket.list(Storage.BlobListOption.prefix(directoryPrefix));
-    logger.trace("Finished GCS bucket list");
+    logger.trace("Finished GCS bucket list {}",directoryPrefix);
 
     for (Blob blob : list.iterateAll()) {
       BlobId blobId = blob.getBlobId();
