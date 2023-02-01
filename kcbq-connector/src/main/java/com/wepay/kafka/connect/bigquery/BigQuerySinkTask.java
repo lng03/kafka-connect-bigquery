@@ -252,9 +252,11 @@ public class BigQuerySinkTask extends SinkTask {
         if (!tableWriterBuilders.containsKey(table)) {
           TableWriterBuilder tableWriterBuilder;
           if (config.getList(BigQuerySinkConfig.ENABLE_BATCH_CONFIG).contains(record.topic())) {
+            logger.trace("Sinking data with the batch enabled");
             String topic = record.topic();
             long offset = record.kafkaOffset();
             String gcsBlobName = topic + "_" + uuid + "_" + Instant.now().toEpochMilli()+"_"+records.size()+"_"+offset;
+            logger.trace("Sinking data with the batch enabled with blob name {}",gcsBlobName);
             String gcsFolderName = config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
             if (gcsFolderName != null && !"".equals(gcsFolderName)) {
               gcsBlobName = gcsFolderName + "/" + gcsBlobName;
@@ -266,6 +268,7 @@ public class BigQuerySinkTask extends SinkTask {
                 gcsBlobName,
                 recordConverter);
           } else {
+            logger.trace("Sinking data with OUT the batch enabled");
             TableWriter.Builder simpleTableWriterBuilder =
                 new TableWriter.Builder(bigQueryWriter, table, recordConverter);
             if (upsertDelete) {
@@ -530,6 +533,7 @@ public class BigQuerySinkTask extends SinkTask {
     String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG);
     String directoryPrefix = config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
     Storage gcs = getGcs();
+    logger.info("Directory prefix --- folder name {}",directoryPrefix);
     // get the bucket, or create it if it does not exist.
 //    Bucket bucket = gcs.get(bucketName);
 //    if (bucket == null) {

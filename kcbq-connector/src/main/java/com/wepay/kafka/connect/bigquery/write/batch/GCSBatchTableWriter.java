@@ -113,7 +113,7 @@ public class GCSBatchTableWriter implements Runnable {
       this.bucketName = gcsBucketName;
       this.blobName = gcsBlobName;
       this.tableId = tableId;
-
+      logger.info("Writing to bucket {} , blob {}  and table {}",gcsBucketName,gcsBlobName,tableId);
       this.rows = new TreeMap<>(Comparator.comparing(SinkRecord::kafkaPartition)
               .thenComparing(SinkRecord::kafkaOffset));
       this.recordConverter = recordConverter;
