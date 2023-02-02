@@ -103,7 +103,9 @@ public class GCSToBQLoadRunnable implements Runnable {
     );
 //    Page<Blob> list = bucket.list(Storage.BlobListOption.prefix(directoryPrefix));
     logger.trace("Finished GCS bucket list {}",directoryPrefix);
-
+    for (Blob blob : list.iterateAll()) {
+      logger.trace("PRINTING Blobs in  {} : {}", directoryPrefix, blob.getName());
+    }
     for (Blob blob : list.iterateAll()) {
       logger.trace("Blobs in  {} : {}",directoryPrefix,blob.getName());
       BlobId blobId = blob.getBlobId();
@@ -193,13 +195,13 @@ public class GCSToBQLoadRunnable implements Runnable {
   }
 
   private Job triggerBigQueryLoadJob(TableId table, List<Blob> blobs) {
-    logger.debug("To trigger BQ load job : {}",  table);
+    logger.debug("GCSToBQWriter: {}",  table);
     List<String> uris = blobs.stream()
                              .map(b -> String.format(SOURCE_URI_FORMAT,
                                                      bucket,
                                                      b.getName()))
                              .collect(Collectors.toList());
-    logger.debug("To trigger BQ load job for : {}",  uris.toString());
+    logger.debug("To trigger BQ load job for : {}",  Arrays.toString(uris.toArray()));
     // create job load configuration
     LoadJobConfiguration loadJobConfiguration =
         LoadJobConfiguration.newBuilder(table, uris)
@@ -213,7 +215,7 @@ public class GCSToBQLoadRunnable implements Runnable {
     List<BlobId> blobIds = blobs.stream().map(Blob::getBlobId).collect(Collectors.toList());
     activeJobs.put(job, blobIds);
     claimedBlobIds.addAll(blobIds);
-    logger.info("Triggered load job for table {} with {} blobs.", table, blobs.size());
+    logger.info("Triggered load job for table {} with {} blobs. and job id {}", table, blobs.size(),job.getJobId());
     return job;
   }
 
