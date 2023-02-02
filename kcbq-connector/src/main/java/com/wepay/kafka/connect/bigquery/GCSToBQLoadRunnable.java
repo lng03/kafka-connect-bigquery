@@ -137,6 +137,9 @@ public class GCSToBQLoadRunnable implements Runnable {
     }
 
     logger.debug("Got blobs to upload: {}", tableToURIs);
+    for (Map.Entry<TableId, List<Blob>> entry : tableToURIs.entrySet()) {
+      logger.debug("Got blobs to upload: KEY {} : VALUE {}",entry.getKey().getTable() ,Arrays.toString( entry.getValue().toArray()));
+    }
     return tableToURIs;
   }
 
