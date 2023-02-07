@@ -27,6 +27,7 @@ import com.google.cloud.bigquery.Table;
 import com.google.cloud.bigquery.TableId;
 import com.google.cloud.bigquery.TimePartitioning;
 import com.google.cloud.bigquery.TimePartitioning.Type;
+import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Bucket;
 import com.google.cloud.storage.BucketInfo;
 import com.google.cloud.storage.Storage;
@@ -514,6 +515,10 @@ public class BigQuerySinkTask extends SinkTask {
 
       TableId baseTableId = TableId.of(dataset, tableName);
       topicsToBaseTableIds.put(sLoadGCS,baseTableId);
+      for (Map.Entry<String, TableId> entry : topicsToBaseTableIds.entrySet()) {
+        logger.trace("Topics base tables {} : {}", entry.getKey(), entry.getValue().getTable());
+      }
+
     }
 
     if (config.getBoolean(BigQuerySinkTaskConfig.GCS_BQ_TASK_CONFIG)) {
