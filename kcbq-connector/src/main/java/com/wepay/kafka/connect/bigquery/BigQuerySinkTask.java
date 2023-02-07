@@ -514,9 +514,11 @@ public class BigQuerySinkTask extends SinkTask {
       }
 
       //if the table name contains dot operator
-      if(tableName.contains(".")){
+      if(tableName.contains(".") || tableName.contains("-")){
         logger.trace("table name contains dot operator");
-        tableName.replaceAll(".","_");
+        tableName.replace(".","_");
+        tableName.replace("-","_");
+        logger.trace("the table name {}",tableName);
       }
 
       TableId baseTableId = TableId.of(dataset, tableName);
@@ -539,7 +541,7 @@ public class BigQuerySinkTask extends SinkTask {
   }
 
   private void startGCSToBQLoadTask() {
-    logger.info("Attempting to start GCS Load Executor. --TEST LOGGER TO SEE IS THIS VERSION IS LOADED --07:18 PM 07-02-2023");
+    logger.info("Attempting to start GCS Load Executor. --TEST LOGGER TO SEE IS THIS VERSION IS LOADED --08:43 PM 07-02-2023");
     loadExecutor = Executors.newScheduledThreadPool(1);
     String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG);
     String directoryPrefix = config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
