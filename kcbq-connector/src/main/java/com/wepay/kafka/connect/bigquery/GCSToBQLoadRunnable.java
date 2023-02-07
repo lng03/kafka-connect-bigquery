@@ -106,6 +106,9 @@ public class GCSToBQLoadRunnable implements Runnable {
     for (Blob blob : list.iterateAll()) {
       logger.trace("PRINTING Blobs in  {} : {}", directoryPrefix, blob.getName());
     }
+    for (TableId tableId: targetTableIds) {
+      logger.trace("Topics base tables {} : {}", tableId.getTable(),tableId.getDataset());
+    }
     for (Blob blob : list.iterateAll()) {
       logger.trace("Blobs in  {} : {}",directoryPrefix,blob.getName());
       BlobId blobId = blob.getBlobId();
