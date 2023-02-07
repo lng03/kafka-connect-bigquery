@@ -288,7 +288,12 @@ public class GCSToBQLoadRunnable implements Runnable {
   private boolean moveBlob(BlobId blobId){
     String bucketName = bucket;
     Blob blob = storage.get(blobId);
+    String metaData=null;
+    if(null!=blob.getMetadata()){
+      metaData=blob.getMetadata().get(GCSToBQWriter.GCS_METADATA_TABLE_KEY);
+    }
     String blobName = blob.getName();
+    logger.info("GCS to archive blob {}.",blobName);
     String directory = blobName.substring(0, blobName.indexOf('/'));
     String jsonName = blobName.substring(blobName.lastIndexOf('/') + 1);
     String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
@@ -297,8 +302,22 @@ public class GCSToBQLoadRunnable implements Runnable {
             date,
             jsonName
     );
+    boolean isCopied=blob.copyTo(bucketName, targetName).isDone();
+    if(isCopied){
+      logger.info("GCS to archive blob {}.with meta data {} ",blobName,metaData);
+      Map<String, String> newMetadata = new HashMap<>();
+      newMetadata.put(GCSToBQWriter.GCS_METADATA_TABLE_KEY,metaData);
+      // Optional: set a generation-match precondition to avoid potential race
+      // conditions and data corruptions. The request to upload returns a 412 error if
+      // the object's generation number does not match your precondition.
+      Storage.BlobTargetOption precondition = Storage.BlobTargetOption.generationMatch();
+      // Does an upsert operation, if the key already exists it's replaced by the new value, otherwise
+      // it's added.
+      blob.toBuilder().setMetadata(newMetadata).build().update(precondition);
 
-    return blob.copyTo(bucketName, targetName).isDone();
+    }
+
+    return isCopied;
   }
 
   /**
