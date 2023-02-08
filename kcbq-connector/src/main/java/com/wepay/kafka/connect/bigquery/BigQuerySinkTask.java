@@ -541,7 +541,7 @@ public class BigQuerySinkTask extends SinkTask {
   }
 
   private void startGCSToBQLoadTask() {
-    logger.info("Attempting to start GCS Load Executor. --TEST LOGGER TO SEE IS THIS VERSION IS LOADED --09:33 PM 07-02-2023");
+    logger.info("Attempting to start GCS Load Executor. --TEST LOGGER TO SEE IS THIS VERSION IS LOADED --10:10 AM 08-02-2023");
     loadExecutor = Executors.newScheduledThreadPool(1);
     String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG);
     String directoryPrefix = config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);

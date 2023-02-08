@@ -280,7 +280,9 @@ public class GCSToBQLoadRunnable implements Runnable {
 
   private List<BlobId> archiveBlobs(List<BlobId> blobIdsToDelete) {
     List<BlobId> resultList = new ArrayList<>();
+    logger.info("Blobs to be deleted {}.",blobIdsToDelete.toString());
     for (BlobId blobId: blobIdsToDelete){
+      logger.info("Lets move the blobs");
       if(!moveBlob(blobId)) {
         resultList.add(blobId);
       }
