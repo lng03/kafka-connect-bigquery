@@ -268,7 +268,7 @@ public class GCSToBQLoadRunnable implements Runnable {
 
   private List<BlobId> archiveBlobs(List<BlobId> blobIdsToDelete) {
     List<BlobId> resultList = new ArrayList<>();
-    logger.info("Blobs to be deleted {}.",blobIdsToDelete.toString());
+    logger.trace("Blobs to be deleted {}.",blobIdsToDelete.toString());
     for (BlobId blobId: blobIdsToDelete){
       if(!moveBlob(blobId)) {
         resultList.add(blobId);
@@ -285,7 +285,7 @@ public class GCSToBQLoadRunnable implements Runnable {
       metaData=blob.getMetadata().get(GCSToBQWriter.GCS_METADATA_TABLE_KEY);
     }
     String blobName = blob.getName();
-    logger.info("GCS to archive blob {}.",blobName);
+    logger.trace("GCS to archive blob {}.",blobName);
     String directory = blobName.substring(0, blobName.indexOf('/'));
     String jsonName = blobName.substring(blobName.lastIndexOf('/') + 1);
     String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
@@ -294,10 +294,10 @@ public class GCSToBQLoadRunnable implements Runnable {
             date,
             jsonName
     );
-    logger.info("GCS to archive blob {} to {}",blobName,targetName);
+    logger.trace("GCS to archive blob {} to {}",blobName,targetName);
     boolean isCopied=blob.copyTo(bucketName, targetName).isDone();
     if(isCopied){
-      logger.info("GCS to archive blob {}.with meta data {} ",blobName,metaData);
+      logger.trace("GCS to archive blob {}.with meta data {} ",blobName,metaData);
       Map<String, String> newMetadata = new HashMap<>();
       newMetadata.put(GCSToBQWriter.GCS_METADATA_TABLE_KEY,metaData);
       // Optional: set a generation-match precondition to avoid potential race

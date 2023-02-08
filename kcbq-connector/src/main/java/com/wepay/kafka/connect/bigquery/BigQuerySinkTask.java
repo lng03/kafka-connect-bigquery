@@ -523,10 +523,6 @@ public class BigQuerySinkTask extends SinkTask {
 
       TableId baseTableId = TableId.of(dataset, tableName);
       topicsToBaseTableIds.put(sLoadGCS,baseTableId);
-      for (Map.Entry<String, TableId> entry : topicsToBaseTableIds.entrySet()) {
-        logger.trace("Topics base tables {} : {}", entry.getKey(), entry.getValue().getTable());
-      }
-
     }
 
     if (config.getBoolean(BigQuerySinkTaskConfig.GCS_BQ_TASK_CONFIG)) {
