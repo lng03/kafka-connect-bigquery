@@ -104,13 +104,6 @@ public class GCSToBQLoadRunnable implements Runnable {
 //    Page<Blob> list = bucket.list(Storage.BlobListOption.prefix(directoryPrefix));
     logger.trace("Finished GCS bucket list {}",directoryPrefix);
     for (Blob blob : list.iterateAll()) {
-      logger.trace("PRINTING Blobs in  {} : {}", directoryPrefix, blob.getName());
-    }
-    for (TableId tableId: targetTableIds) {
-      logger.trace("Topics base tables {} : {}", tableId.getTable(),tableId.getDataset());
-    }
-    for (Blob blob : list.iterateAll()) {
-      logger.trace("Blobs in  {} : {}",directoryPrefix,blob.getName());
       BlobId blobId = blob.getBlobId();
       TableId table = getTableFromBlob(blob);
       logger.debug("Checking blob bucket={}, name={}, table={} ", blob.getBucket(), blob.getName(), table );
@@ -123,7 +116,7 @@ public class GCSToBQLoadRunnable implements Runnable {
         // 2. this blob is already claimed by a currently-running job or
         // 3. this blob is up for deletion.
         // 4. this blob is not targeted for our target  tables
-        logger.debug("DON'T DO ANYTHING TO THIS BLOB AS ,condition 2 : {} ,condition 3 : {} ,condition 4 : {} ,",claimedBlobIds.contains(blobId),deletableBlobIds.contains(blobId) ,!targetTableIds.contains(table));
+        logger.trace("DON'T DO ANYTHING TO THIS BLOB AS ,condition 2 : {} ,condition 3 : {} ,condition 4 : {} ,",claimedBlobIds.contains(blobId),deletableBlobIds.contains(blobId) ,!targetTableIds.contains(table));
         continue;
       }
 
@@ -143,9 +136,6 @@ public class GCSToBQLoadRunnable implements Runnable {
     }
 
     logger.debug("Got blobs to upload: {}", tableToURIs);
-    for (Map.Entry<TableId, List<Blob>> entry : tableToURIs.entrySet()) {
-      logger.debug("Got blobs to upload: KEY {} : VALUE {}",entry.getKey().getTable() ,Arrays.toString( entry.getValue().toArray()));
-    }
     return tableToURIs;
   }
 
@@ -199,13 +189,11 @@ public class GCSToBQLoadRunnable implements Runnable {
   }
 
   private Job triggerBigQueryLoadJob(TableId table, List<Blob> blobs) {
-    logger.debug("GCSToBQWriter: {}",  table);
     List<String> uris = blobs.stream()
                              .map(b -> String.format(SOURCE_URI_FORMAT,
                                                      bucket,
                                                      b.getName()))
                              .collect(Collectors.toList());
-    logger.debug("To trigger BQ load job for : {}",  Arrays.toString(uris.toArray()));
     // create job load configuration
     LoadJobConfiguration loadJobConfiguration =
         LoadJobConfiguration.newBuilder(table, uris)
@@ -282,7 +270,6 @@ public class GCSToBQLoadRunnable implements Runnable {
     List<BlobId> resultList = new ArrayList<>();
     logger.info("Blobs to be deleted {}.",blobIdsToDelete.toString());
     for (BlobId blobId: blobIdsToDelete){
-      logger.info("Lets move the blobs");
       if(!moveBlob(blobId)) {
         resultList.add(blobId);
       }
@@ -307,6 +294,7 @@ public class GCSToBQLoadRunnable implements Runnable {
             date,
             jsonName
     );
+    logger.info("GCS to archive blob {} to {}",blobName,targetName);
     boolean isCopied=blob.copyTo(bucketName, targetName).isDone();
     if(isCopied){
       logger.info("GCS to archive blob {}.with meta data {} ",blobName,metaData);
