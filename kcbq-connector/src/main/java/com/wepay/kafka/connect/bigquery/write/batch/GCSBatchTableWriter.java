@@ -109,8 +109,9 @@ public class GCSBatchTableWriter implements Runnable {
                    String gcsBucketName,
                    String gcsBlobName,
                    SinkRecordConverter recordConverter) {
-
-      this.bucketName = gcsBucketName;
+      logger.info("CONNECT_REST_ADVERTISED_HOST_NAME -- {}",System.getenv("CONNECT_REST_ADVERTISED_HOST_NAME"));
+      String hostPodName=System.getenv("CONNECT_REST_ADVERTISED_HOST_NAME");
+      this.bucketName = gcsBucketName+"/"+hostPodName;
       this.blobName = gcsBlobName;
       this.tableId = tableId;
 
