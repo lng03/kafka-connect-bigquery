@@ -84,7 +84,7 @@ public class BigQuerySinkConnector extends SinkConnector {
 
   @Override
   public List<Map<String, String>> taskConfigs(int maxTasks) {
-    logger.info("CONNECT_REST_ADVERTISED_HOST_NAME -- {}",System.getenv("CONNECT_REST_ADVERTISED_HOST_NAME"));
+    logger.info("CONNECT_REST_ADVERTISED_POD_NAME -- {}",System.getenv("CONNECT_REST_ADVERTISED_POD_NAME"));
     logger.trace("connector.taskConfigs()");
     List<Map<String, String>> taskConfigs = new ArrayList<>();
     for (int i = 0; i < maxTasks; i++) {

@@ -73,8 +73,8 @@ public class GCSToBQLoadRunnable implements Runnable {
    * @param topicsToBaseTableIds
    */
   public GCSToBQLoadRunnable(BigQuery bigQuery, Storage storage, String bucket, String directoryPrefix, Map<String, TableId> topicsToBaseTableIds) {
-    logger.info("CONNECT_REST_ADVERTISED_HOST_NAME -- {}",System.getenv("CONNECT_REST_ADVERTISED_HOST_NAME"));
-    String hostPodName=System.getenv("CONNECT_REST_ADVERTISED_HOST_NAME");
+    logger.info("CONNECT_REST_ADVERTISED_POD_NAME -- {}",System.getenv("CONNECT_REST_ADVERTISED_POD_NAME"));
+    String hostPodName=System.getenv("CONNECT_REST_ADVERTISED_POD_NAME");
     this.bigQuery = bigQuery;
     this.storage = storage;
     this.bucket = bucket+"/"+hostPodName;
