@@ -27,7 +27,6 @@ import com.google.cloud.bigquery.Table;
 import com.google.cloud.bigquery.TableId;
 import com.google.cloud.bigquery.TimePartitioning;
 import com.google.cloud.bigquery.TimePartitioning.Type;
-import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Bucket;
 import com.google.cloud.storage.BucketInfo;
 import com.google.cloud.storage.Storage;
@@ -118,6 +117,8 @@ public class BigQuerySinkTask extends SinkTask {
   private ScheduledExecutorService loadExecutor;
 
   private Map<TableId, Table> cache;
+
+  private String podName = System.getenv("CONNECT_POD_NAME");
 
   /**
    * Create a new BigquerySinkTask.
@@ -253,14 +254,12 @@ public class BigQuerySinkTask extends SinkTask {
         if (!tableWriterBuilders.containsKey(table)) {
           TableWriterBuilder tableWriterBuilder;
           if (config.getList(BigQuerySinkConfig.ENABLE_BATCH_CONFIG).contains(record.topic())) {
-            logger.trace("Sinking data with the batch enabled");
             String topic = record.topic();
             long offset = record.kafkaOffset();
             String gcsBlobName = topic + "_" + uuid + "_" + Instant.now().toEpochMilli()+"_"+records.size()+"_"+offset;
-            logger.trace("Sinking data with the batch enabled with blob name {}",gcsBlobName);
-            String gcsFolderName = config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
+            String gcsFolderName = podName.concat(config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG));
             if (gcsFolderName != null && !"".equals(gcsFolderName)) {
-              gcsBlobName = gcsFolderName + "/" + gcsBlobName;
+              gcsBlobName = gcsFolderName + "/" + gcsBlobName ;
             }
             tableWriterBuilder = new GCSBatchTableWriter.Builder(
                 gcsToBQWriter,
@@ -269,7 +268,6 @@ public class BigQuerySinkTask extends SinkTask {
                 gcsBlobName,
                 recordConverter);
           } else {
-            logger.trace("Sinking data with OUT the batch enabled");
             TableWriter.Builder simpleTableWriterBuilder =
                 new TableWriter.Builder(bigQueryWriter, table, recordConverter);
             if (upsertDelete) {
@@ -509,16 +507,8 @@ public class BigQuerySinkTask extends SinkTask {
                 "Incorrect regex replacement format in topic name '%s'. "
                         + "SMT replacement should either produce the <dataset>:<tableName> format "
                         + "or just the <tableName> format.",
-                sLoadGCS
+                "ERROR"
         ));
-      }
-
-      //if the table name contains dot operator
-      if(tableName.contains(".") || tableName.contains("-")){
-        logger.trace("table name contains dot operator");
-        tableName=tableName.replace(".","_");
-        tableName=tableName.replace("-","_");
-        logger.trace("the table name {}",tableName);
       }
 
       TableId baseTableId = TableId.of(dataset, tableName);
@@ -537,10 +527,11 @@ public class BigQuerySinkTask extends SinkTask {
   }
 
   private void startGCSToBQLoadTask() {
-    logger.info("Attempting to start GCS Load Executor - Updated version");
+    logger.info("Attempting to start GCS Load Executor.");
     loadExecutor = Executors.newScheduledThreadPool(1);
     String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG);
-    String directoryPrefix = config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
+   // String podName = System.getenv("CONNECT_POD_NAME");
+    String directoryPrefix = podName.concat(config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG));
     Storage gcs = getGcs();
     // get the bucket, or create it if it does not exist.
 //    Bucket bucket = gcs.get(bucketName);
