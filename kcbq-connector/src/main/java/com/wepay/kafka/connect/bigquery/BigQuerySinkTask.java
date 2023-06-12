@@ -119,6 +119,8 @@ public class BigQuerySinkTask extends SinkTask {
 
   private Map<TableId, Table> cache;
 
+  private String podName = System.getenv("CONNECT_POD_NAME");
+
   /**
    * Create a new BigquerySinkTask.
    */
@@ -260,7 +262,7 @@ public class BigQuerySinkTask extends SinkTask {
             logger.trace("Sinking data with the batch enabled with blob name {}",gcsBlobName);
             String gcsFolderName = config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
             if (gcsFolderName != null && !"".equals(gcsFolderName)) {
-              gcsBlobName = gcsFolderName + "/" + gcsBlobName;
+              gcsBlobName = gcsFolderName + "/" + gcsBlobName ;
             }
             tableWriterBuilder = new GCSBatchTableWriter.Builder(
                 gcsToBQWriter,
@@ -509,7 +511,7 @@ public class BigQuerySinkTask extends SinkTask {
                 "Incorrect regex replacement format in topic name '%s'. "
                         + "SMT replacement should either produce the <dataset>:<tableName> format "
                         + "or just the <tableName> format.",
-                sLoadGCS
+                "ERROR"
         ));
       }
 
@@ -540,7 +542,8 @@ public class BigQuerySinkTask extends SinkTask {
     logger.info("Attempting to start GCS Load Executor - Updated version");
     loadExecutor = Executors.newScheduledThreadPool(1);
     String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG);
-    String directoryPrefix = config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
+   // String podName = System.getenv("CONNECT_POD_NAME");
+    String directoryPrefix = podName.concat(config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG));
     Storage gcs = getGcs();
     // get the bucket, or create it if it does not exist.
 //    Bucket bucket = gcs.get(bucketName);
