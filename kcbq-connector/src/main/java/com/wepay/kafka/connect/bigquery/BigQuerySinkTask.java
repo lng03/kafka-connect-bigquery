@@ -258,12 +258,12 @@ public class BigQuerySinkTask extends SinkTask {
             long offset = record.kafkaOffset();
             String gcsBlobName = topic + "_" + uuid + "_" + Instant.now().toEpochMilli()+"_"+records.size()+"_"+offset;
             String gcsFolderName = config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
-            logger.info("Value for gcsFolderName {}",gcsFolderName);
-            logger.info("Value for podName {}",podName);
-            logger.info("Value for HostName {}",System.getenv("HOSTNAME"));
+            logger.debug("Value for gcsFolderName {}",gcsFolderName);
+            logger.debug("Value for podName {}",podName);
+            logger.debug("Value for HostName {}",System.getenv("HOSTNAME"));
             if (gcsFolderName != null && !"".equals(gcsFolderName)) {
               gcsBlobName = gcsFolderName + "/" + podName.concat(gcsBlobName) ;
-              logger.info("Value for gcsBlobName {}",gcsBlobName);
+              logger.debug("Value for gcsBlobName {}",gcsBlobName);
             }
             tableWriterBuilder = new GCSBatchTableWriter.Builder(
                 gcsToBQWriter,
@@ -536,7 +536,7 @@ public class BigQuerySinkTask extends SinkTask {
     String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG);
 
     String directoryPrefix = config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
-    logger.info("Value for directoryPrefix {}",directoryPrefix);
+    logger.debug("Value for directoryPrefix {}",directoryPrefix);
     Storage gcs = getGcs();
     // get the bucket, or create it if it does not exist.
 //    Bucket bucket = gcs.get(bucketName);
