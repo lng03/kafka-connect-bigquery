@@ -257,12 +257,12 @@ public class BigQuerySinkTask extends SinkTask {
             String topic = record.topic();
             long offset = record.kafkaOffset();
             String gcsBlobName = topic + "_" + uuid + "_" + Instant.now().toEpochMilli()+"_"+records.size()+"_"+offset;
-            String gcsFolderName = config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
+            String gcsFolderName = podName + "/" + config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
             logger.debug("Value for gcsFolderName {}",gcsFolderName);
             logger.debug("Value for podName {}",podName);
             logger.debug("Value for HostName {}",System.getenv("HOSTNAME"));
             if (gcsFolderName != null && !"".equals(gcsFolderName)) {
-              gcsBlobName = gcsFolderName + "/" + podName.concat(gcsBlobName) ;
+              gcsBlobName = gcsFolderName + "/" + gcsBlobName ;
               logger.debug("Value for gcsBlobName {}",gcsBlobName);
             }
             tableWriterBuilder = new GCSBatchTableWriter.Builder(
