@@ -102,7 +102,8 @@ public class GCSToBQLoadRunnable implements Runnable {
             Storage.BlobListOption.prefix(directoryPrefix)
     );
 //    Page<Blob> list = bucket.list(Storage.BlobListOption.prefix(directoryPrefix));
-    logger.trace("Finished GCS bucket list {}",directoryPrefix);
+    logger.trace("Finished GCS bucket list");
+
     for (Blob blob : list.iterateAll()) {
       BlobId blobId = blob.getBlobId();
       TableId table = getTableFromBlob(blob);
@@ -116,7 +117,6 @@ public class GCSToBQLoadRunnable implements Runnable {
         // 2. this blob is already claimed by a currently-running job or
         // 3. this blob is up for deletion.
         // 4. this blob is not targeted for our target  tables
-        logger.trace("DON'T DO ANYTHING TO THIS BLOB AS ,condition 2 : {} ,condition 3 : {} ,condition 4 : {} ,",claimedBlobIds.contains(blobId),deletableBlobIds.contains(blobId) ,!targetTableIds.contains(table));
         continue;
       }
 
@@ -207,7 +207,7 @@ public class GCSToBQLoadRunnable implements Runnable {
     List<BlobId> blobIds = blobs.stream().map(Blob::getBlobId).collect(Collectors.toList());
     activeJobs.put(job, blobIds);
     claimedBlobIds.addAll(blobIds);
-    logger.info("Triggered load job for table {} with {} blobs. and job id {}", table, blobs.size(),job.getJobId());
+    logger.info("Triggered load job for table {} with {} blobs.", table, blobs.size());
     return job;
   }
 
@@ -268,7 +268,6 @@ public class GCSToBQLoadRunnable implements Runnable {
 
   private List<BlobId> archiveBlobs(List<BlobId> blobIdsToDelete) {
     List<BlobId> resultList = new ArrayList<>();
-    logger.trace("Blobs to be deleted {}.",blobIdsToDelete.toString());
     for (BlobId blobId: blobIdsToDelete){
       if(!moveBlob(blobId)) {
         resultList.add(blobId);
@@ -280,37 +279,20 @@ public class GCSToBQLoadRunnable implements Runnable {
   private boolean moveBlob(BlobId blobId){
     String bucketName = bucket;
     Blob blob = storage.get(blobId);
-    String metaData=null;
-    if(null!=blob.getMetadata()){
-      metaData=blob.getMetadata().get(GCSToBQWriter.GCS_METADATA_TABLE_KEY);
-    }
     String blobName = blob.getName();
-    logger.trace("GCS to archive blob {}.",blobName);
+    logger.debug("Inside GCStoBQ blobName {}",blobName);
     String directory = blobName.substring(0, blobName.indexOf('/'));
+    logger.debug("Inside GCStoBQ directory {}",directory);
     String jsonName = blobName.substring(blobName.lastIndexOf('/') + 1);
+    logger.debug("Inside GCStoBQ jsonName {}",directory);
     String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
     String targetName = String.format("archive/%s/dt=%s/%s",
             directory,
             date,
             jsonName
     );
-    logger.trace("GCS to archive blob {} to {}",blobName,targetName);
-    boolean isCopied=blob.copyTo(bucketName, targetName).isDone();
-    if(isCopied){
-      logger.trace("GCS to archive blob {}.with meta data {} ",blobName,metaData);
-      Map<String, String> newMetadata = new HashMap<>();
-      newMetadata.put(GCSToBQWriter.GCS_METADATA_TABLE_KEY,metaData);
-      // Optional: set a generation-match precondition to avoid potential race
-      // conditions and data corruptions. The request to upload returns a 412 error if
-      // the object's generation number does not match your precondition.
-      Storage.BlobTargetOption precondition = Storage.BlobTargetOption.generationMatch();
-      // Does an upsert operation, if the key already exists it's replaced by the new value, otherwise
-      // it's added.
-      blob.toBuilder().setMetadata(newMetadata).build().update(precondition);
-
-    }
-
-    return isCopied;
+    logger.debug("Inside GCStoBQ targetName {}",targetName);
+    return blob.copyTo(bucketName, targetName).isDone();
   }
 
   /**
