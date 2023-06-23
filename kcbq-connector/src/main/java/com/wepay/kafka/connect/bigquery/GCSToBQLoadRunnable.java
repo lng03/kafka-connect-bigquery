@@ -146,6 +146,14 @@ public class GCSToBQLoadRunnable implements Runnable {
    *         table it should be loaded into.
    */
   public static TableId getTableFromBlob(Blob blob) {
+    logger.info("blob.getMetadata(): {}",blob.getMetadata());
+    logger.info("blob.getBucket(): {}",blob.getBucket());
+    logger.info("blob.getName(): {}",blob.getName());
+    logger.info("GCSToBQWriter.GCS_METADATA_TABLE_KEY: {}",GCSToBQWriter.GCS_METADATA_TABLE_KEY);
+    logger.debug("blob.getMetadata(): {}",blob.getMetadata());
+    logger.debug("blob.getBucket(): {}",blob.getBucket());
+    logger.debug("blob.getName(): {}",blob.getName());
+    logger.debug("GCSToBQWriter.GCS_METADATA_TABLE_KEY: {}",GCSToBQWriter.GCS_METADATA_TABLE_KEY);
     if (blob.getMetadata() == null
         || blob.getMetadata().get(GCSToBQWriter.GCS_METADATA_TABLE_KEY) == null) {
       logger.error("Found blob {}/{} with no metadata.", blob.getBucket(), blob.getName());
@@ -165,7 +173,7 @@ public class GCSToBQLoadRunnable implements Runnable {
     String dataset = matcher.group("dataset");
     String table = matcher.group("table");
     logger.debug("Table data: project: {}; dataset: {}; table: {}", project, dataset, table);
-
+    logger.info("Table data: project: {}; dataset: {}; table: {}", project, dataset, table);
     if (project == null) {
       return TableId.of(dataset, table);
     } else {
