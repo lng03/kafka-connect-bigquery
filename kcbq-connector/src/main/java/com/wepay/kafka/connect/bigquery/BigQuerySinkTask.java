@@ -85,6 +85,8 @@ import static com.wepay.kafka.connect.bigquery.utils.TableNameUtils.intTable;
  */
 public class BigQuerySinkTask extends SinkTask {
   private static final Logger logger = LoggerFactory.getLogger(BigQuerySinkTask.class);
+  
+  logger.debug("Inside BigQuerySinkTask classs");
 
   private AtomicReference<BigQuery> bigQuery;
   private AtomicReference<SchemaManager> schemaManager;
