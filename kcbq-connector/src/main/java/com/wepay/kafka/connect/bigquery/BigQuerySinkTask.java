@@ -85,8 +85,6 @@ import static com.wepay.kafka.connect.bigquery.utils.TableNameUtils.intTable;
  */
 public class BigQuerySinkTask extends SinkTask {
   private static final Logger logger = LoggerFactory.getLogger(BigQuerySinkTask.class);
-  
-  logger.debug("Inside BigQuerySinkTask classs");
 
   private AtomicReference<BigQuery> bigQuery;
   private AtomicReference<SchemaManager> schemaManager;
@@ -536,8 +534,10 @@ public class BigQuerySinkTask extends SinkTask {
     logger.info("Attempting to start GCS Load Executor.");
     loadExecutor = Executors.newScheduledThreadPool(1);
     String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG);
-
-    String directoryPrefix = config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
+    logger.info("Value for bucketName {}",bucketName);
+    logger.debug("Value for bucketName {}",bucketName);
+    String directoryPrefix = podName + "/" + config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
+    logger.info("Value for directoryPrefix {}",directoryPrefix);
     logger.debug("Value for directoryPrefix {}",directoryPrefix);
     Storage gcs = getGcs();
     // get the bucket, or create it if it does not exist.
