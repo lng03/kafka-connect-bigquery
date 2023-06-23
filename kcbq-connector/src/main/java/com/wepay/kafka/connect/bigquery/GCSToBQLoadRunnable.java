@@ -106,7 +106,9 @@ public class GCSToBQLoadRunnable implements Runnable {
 //    Page<Blob> list = bucket.list(Storage.BlobListOption.prefix(directoryPrefix));
     logger.trace("Finished GCS bucket list");
 
+
     for (Blob blob : list.iterateAll()) {
+      logger.debug("bucket blob: {}",blob);
       BlobId blobId = blob.getBlobId();
       TableId table = getTableFromBlob(blob);
       logger.debug("Checking blob bucket={}, name={}, table={} ", blob.getBucket(), blob.getName(), table );
@@ -172,7 +174,7 @@ public class GCSToBQLoadRunnable implements Runnable {
     String project = matcher.group("project");
     String dataset = matcher.group("dataset");
     String table =  matcher.group("table");
-   // table = podName + "/" + table;
+    table = podName + "/" + table;
     logger.debug("Table data: project: {}; dataset: {}; table: {}", project, dataset, table);
     logger.info("Table data: project: {}; dataset: {}; table: {}", project, dataset, table);
     if (project == null) {
