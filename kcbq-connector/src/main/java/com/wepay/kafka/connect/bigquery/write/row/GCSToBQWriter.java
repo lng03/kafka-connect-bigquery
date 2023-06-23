@@ -112,7 +112,9 @@ public class GCSToBQWriter {
 
     // Get Source URI
     BlobId blobId = BlobId.of(bucketName, blobName);
-
+    logger.debug("Checking blobId {} ", blobId );
+    logger.debug("Checking bucketName {} ", bucketName );
+    logger.debug("Checking blobName {} ", blobName );
     Map<String, String> metadata = getMetadata(tableId);
     BlobInfo blobInfo =
          BlobInfo.newBuilder(blobId).setContentType("text/json").setMetadata(metadata).build();
