@@ -110,6 +110,7 @@ public class GCSToBQLoadRunnable implements Runnable {
 
     for (Blob blob : list.iterateAll()) {
       logger.debug("bucket blob: {}",blob);
+      logger.debug("blob.getBlobId(): {}",blob.getBlobId());
       BlobId blobId = blob.getBlobId();
       TableId table = getTableFromBlob(blob);
       logger.debug("Checking blob bucket={}, name={}, table={} ", blob.getBucket(), blob.getName(), table );
@@ -129,8 +130,12 @@ public class GCSToBQLoadRunnable implements Runnable {
         // initialize maps, if we haven't seen this table before.
         tableToURIs.put(table, new ArrayList<>());
         tableToCurrentLoadSize.put(table, 0L);
+        logger.debug("Inside tableToURIs: {}", tableToURIs);
+        logger.debug("Inside tableToURIs.get(table): {}", tableToURIs.get(table));
       }
-
+      logger.debug("tableToURIs: {}", tableToURIs);
+      logger.debug("tableToURIs.get(table): {}", tableToURIs.get(table));
+      logger.debug("tableToURIs.get(table).size(): {}", tableToURIs.get(table).size());
       long newSize = tableToCurrentLoadSize.get(table) + blob.getSize();
       // if this file does not cause us to exceed our per-request quota limits...
       if (newSize < MAX_LOAD_SIZE_B && tableToURIs.get(table).size() < FILE_LOAD_LIMIT) {
@@ -176,7 +181,7 @@ public class GCSToBQLoadRunnable implements Runnable {
     String project = matcher.group("project");
     String dataset = matcher.group("dataset");
     String table =  matcher.group("table");
-   // table = podName + "/" + table;
+
     logger.debug("Table data: project: {}; dataset: {}; table: {}", project, dataset, table);
     logger.info("Table data: project: {}; dataset: {}; table: {}", project, dataset, table);
     if (project == null) {
@@ -195,7 +200,10 @@ public class GCSToBQLoadRunnable implements Runnable {
    */
   private Map<Job, List<Blob>> triggerBigQueryLoadJobs(Map<TableId, List<Blob>> tablesToBlobs) {
     Map<Job, List<Blob>> newJobs = new HashMap<>(tablesToBlobs.size());
+    logger.debug("tablesToBlobs: {}", tablesToBlobs);
     for (Map.Entry<TableId, List<Blob>> entry : tablesToBlobs.entrySet()) {
+      logger.debug("entry.getKey(): {}", entry.getKey());
+      logger.debug("entry.getValue(): {}", entry.getValue());
       newJobs.put(triggerBigQueryLoadJob(entry.getKey(), entry.getValue()), entry.getValue());
     }
     return newJobs;

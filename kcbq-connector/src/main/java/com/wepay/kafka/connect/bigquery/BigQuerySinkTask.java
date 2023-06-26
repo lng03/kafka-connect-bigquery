@@ -534,10 +534,10 @@ public class BigQuerySinkTask extends SinkTask {
     logger.info("Attempting to start GCS Load Executor.");
     loadExecutor = Executors.newScheduledThreadPool(1);
     String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG);
-    logger.info("Value for bucketName {}",bucketName);
+
     logger.debug("Value for bucketName {}",bucketName);
-    String directoryPrefix = podName + "/" + config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
-    logger.info("Value for directoryPrefix {}",directoryPrefix);
+   // String directoryPrefix = podName + "/" + config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
+    String directoryPrefix =  config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
     logger.debug("Value for directoryPrefix {}",directoryPrefix);
     Storage gcs = getGcs();
     // get the bucket, or create it if it does not exist.
@@ -562,6 +562,10 @@ public class BigQuerySinkTask extends SinkTask {
             config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG),
             directoryPrefix,
             topicsToBaseTableIds);
+    logger.debug("Value for topicsToBaseTableIds {}",topicsToBaseTableIds);
+    logger.debug("Value for BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG {}",config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG));
+    logger.debug("Value for getBigQuery {}",getBigQuery());
+    logger.debug("Value for gcs {}",gcs);
 
     int intervalSec = config.getInt(BigQuerySinkConfig.BATCH_LOAD_INTERVAL_SEC_CONFIG);
     loadExecutor.scheduleAtFixedRate(loadRunnable, intervalSec, intervalSec, TimeUnit.SECONDS);
