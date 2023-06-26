@@ -536,8 +536,8 @@ public class BigQuerySinkTask extends SinkTask {
     String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG);
 
     logger.debug("Value for bucketName {}",bucketName);
-   // String directoryPrefix = podName + "/" + config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
-    String directoryPrefix =  config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
+    String directoryPrefix = podName + "/" + config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
+  //  String directoryPrefix =  config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
     logger.debug("Value for directoryPrefix {}",directoryPrefix);
     Storage gcs = getGcs();
     // get the bucket, or create it if it does not exist.
