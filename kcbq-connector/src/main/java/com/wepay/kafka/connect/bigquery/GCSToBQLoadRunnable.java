@@ -65,8 +65,6 @@ public class GCSToBQLoadRunnable implements Runnable {
   public static final Pattern METADATA_TABLE_PATTERN =
           Pattern.compile("((?<project>[^:]+):)?(?<dataset>[^.]+)\\.(?<table>.+)");
 
-  private String podName = System.getenv("CONNECT_POD_NAME");
-
   /**
    * Create a {@link GCSToBQLoadRunnable} with the given bigquery, bucket, and ms wait interval.
    * @param bigQuery the {@link BigQuery} instance.
@@ -157,11 +155,13 @@ public class GCSToBQLoadRunnable implements Runnable {
    */
   public static TableId getTableFromBlob(Blob blob) {
 
+    //
+
     logger.debug("Inside getTableFromBlob");
     logger.debug("blob.getMetadata(): {}",blob.getMetadata());
     logger.debug("blob.getBucket(): {}",blob.getBucket());
     logger.debug("blob.getName(): {}",blob.getName());
-    logger.debug("GCSToBQWriter.GCS_METADATA_TABLE_KEY: {}",GCSToBQWriter.GCS_METADATA_TABLE_KEY);
+    logger.debug("GCSToBQWriter.GCS_METADATA_TABLE_KEY: {}",blob.getMetadata().get(GCSToBQWriter.GCS_METADATA_TABLE_KEY));
 
     if (blob.getMetadata() == null
         || blob.getMetadata().get(GCSToBQWriter.GCS_METADATA_TABLE_KEY) == null) {

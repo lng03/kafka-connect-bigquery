@@ -258,7 +258,8 @@ public class BigQuerySinkTask extends SinkTask {
             long offset = record.kafkaOffset();
             String gcsBlobName = topic + "_" + uuid + "_" + Instant.now().toEpochMilli()+"_"+records.size()+"_"+offset;
             logger.debug("Value for podName {}",podName);
-            String gcsFolderName = podName + "/" + config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
+           // String gcsFolderName = podName + "/" + config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
+            String gcsFolderName =  config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
             logger.debug("Value for gcsFolderName {}",gcsFolderName);
             logger.debug("Value for HostName {}",System.getenv("HOSTNAME"));
             if (gcsFolderName != null && !"".equals(gcsFolderName)) {
@@ -268,7 +269,7 @@ public class BigQuerySinkTask extends SinkTask {
             tableWriterBuilder = new GCSBatchTableWriter.Builder(
                 gcsToBQWriter,
                 table.getBaseTableId(),
-                config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG),
+                config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG) + "/" + podName,
                 gcsBlobName,
                 recordConverter);
           } else {
@@ -424,8 +425,10 @@ public class BigQuerySinkTask extends SinkTask {
 
   private Storage getGcs() {
     if (testGcs != null) {
+      logger.debug("Value for testGcs {}",testGcs);
       return testGcs;
     }
+    logger.debug("Value for GcsBuilder {}",GcpClientBuilder.GcsBuilder().withConfig(config).build());
     return new GcpClientBuilder.GcsBuilder()
         .withConfig(config)
         .build();
@@ -436,6 +439,7 @@ public class BigQuerySinkTask extends SinkTask {
     int retry = config.getInt(BigQuerySinkConfig.BIGQUERY_RETRY_CONFIG);
     long retryWait = config.getLong(BigQuerySinkConfig.BIGQUERY_RETRY_WAIT_CONFIG);
     boolean autoCreateTables = config.getBoolean(BigQuerySinkConfig.TABLE_CREATE_CONFIG);
+    logger.debug("Value for autoCreateTables {}",autoCreateTables);
     // schemaManager shall only be needed for creating table hence do not fetch instance if not
     // needed.
     SchemaManager schemaManager = autoCreateTables ? getSchemaManager() : null;
@@ -478,6 +482,7 @@ public class BigQuerySinkTask extends SinkTask {
           uuid,
           Instant.now().toEpochMilli()
       );
+      logger.debug("Value for intermediateTableSuffix {}",intermediateTableSuffix);
       mergeBatches = new MergeBatches(intermediateTableSuffix);
     }
 
@@ -533,10 +538,10 @@ public class BigQuerySinkTask extends SinkTask {
   private void startGCSToBQLoadTask() {
     logger.info("Attempting to start GCS Load Executor.");
     loadExecutor = Executors.newScheduledThreadPool(1);
-    String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG);
+    String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG)+ "/" + podName;
 
     logger.debug("Value for bucketName {}",bucketName);
-    String directoryPrefix = podName + "/" + config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
+    String directoryPrefix =  config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
   //  String directoryPrefix =  config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
     logger.debug("Value for directoryPrefix {}",directoryPrefix);
     Storage gcs = getGcs();
@@ -559,7 +564,7 @@ public class BigQuerySinkTask extends SinkTask {
     GCSToBQLoadRunnable loadRunnable = new GCSToBQLoadRunnable(
             getBigQuery(),
             gcs,
-            config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG),
+            config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG)+ "/" + podName,
             directoryPrefix,
             topicsToBaseTableIds);
     logger.debug("Value for topicsToBaseTableIds {}",topicsToBaseTableIds);
