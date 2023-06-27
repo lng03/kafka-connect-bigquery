@@ -247,7 +247,7 @@ public class BigQuerySinkTask extends SinkTask {
 
     // create tableWriters
     Map<PartitionedTableId, TableWriterBuilder> tableWriterBuilders = new HashMap<>();
-    String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG);
+    String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG)+ "/" + podName;
     logger.debug("Value for bucketName {}",bucketName);
     for (SinkRecord record : records) {
       if (record.value() != null || config.getBoolean(BigQuerySinkConfig.DELETE_ENABLED_CONFIG)) {
@@ -429,7 +429,6 @@ public class BigQuerySinkTask extends SinkTask {
       logger.debug("Value for testGcs {}",testGcs);
       return testGcs;
     }
-    logger.debug("Value for GcsBuilder {}",GcpClientBuilder.GcsBuilder().withConfig(config).build());
     return new GcpClientBuilder.GcsBuilder()
         .withConfig(config)
         .build();
@@ -539,8 +538,8 @@ public class BigQuerySinkTask extends SinkTask {
   private void startGCSToBQLoadTask() {
     logger.info("Attempting to start GCS Load Executor.");
     loadExecutor = Executors.newScheduledThreadPool(1);
-    //String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG)+ "/" + podName;
-    String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG);
+    String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG)+ "/" + podName;
+
     logger.debug("Value for bucketName {}",bucketName);
     String directoryPrefix =  config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
   //  String directoryPrefix =  config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
