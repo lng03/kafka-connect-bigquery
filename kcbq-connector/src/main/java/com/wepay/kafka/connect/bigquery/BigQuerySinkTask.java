@@ -426,7 +426,6 @@ public class BigQuerySinkTask extends SinkTask {
 
   private Storage getGcs() {
     if (testGcs != null) {
-      logger.debug("Value for testGcs {}",testGcs);
       return testGcs;
     }
     return new GcpClientBuilder.GcsBuilder()
@@ -439,7 +438,6 @@ public class BigQuerySinkTask extends SinkTask {
     int retry = config.getInt(BigQuerySinkConfig.BIGQUERY_RETRY_CONFIG);
     long retryWait = config.getLong(BigQuerySinkConfig.BIGQUERY_RETRY_WAIT_CONFIG);
     boolean autoCreateTables = config.getBoolean(BigQuerySinkConfig.TABLE_CREATE_CONFIG);
-    logger.debug("Value for autoCreateTables {}",autoCreateTables);
     // schemaManager shall only be needed for creating table hence do not fetch instance if not
     // needed.
     SchemaManager schemaManager = autoCreateTables ? getSchemaManager() : null;
@@ -482,7 +480,6 @@ public class BigQuerySinkTask extends SinkTask {
           uuid,
           Instant.now().toEpochMilli()
       );
-      logger.debug("Value for intermediateTableSuffix {}",intermediateTableSuffix);
       mergeBatches = new MergeBatches(intermediateTableSuffix);
     }
 
@@ -567,11 +564,7 @@ public class BigQuerySinkTask extends SinkTask {
             bucketName,
             directoryPrefix,
             topicsToBaseTableIds);
-    logger.debug("Value for topicsToBaseTableIds {}",topicsToBaseTableIds);
-    logger.debug("Value for BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG {}",config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG));
-    logger.debug("Value for getBigQuery {}",getBigQuery());
-    logger.debug("Value for gcs {}",gcs);
-
+    
     int intervalSec = config.getInt(BigQuerySinkConfig.BATCH_LOAD_INTERVAL_SEC_CONFIG);
     loadExecutor.scheduleAtFixedRate(loadRunnable, intervalSec, intervalSec, TimeUnit.SECONDS);
   }
