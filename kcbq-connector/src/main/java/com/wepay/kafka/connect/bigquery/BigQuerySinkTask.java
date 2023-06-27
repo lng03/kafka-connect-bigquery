@@ -247,7 +247,8 @@ public class BigQuerySinkTask extends SinkTask {
 
     // create tableWriters
     Map<PartitionedTableId, TableWriterBuilder> tableWriterBuilders = new HashMap<>();
-
+    String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG)+ "/" + podName;
+    logger.debug("Value for bucketName {}",bucketName);
     for (SinkRecord record : records) {
       if (record.value() != null || config.getBoolean(BigQuerySinkConfig.DELETE_ENABLED_CONFIG)) {
         PartitionedTableId table = getRecordTable(record);
@@ -269,7 +270,7 @@ public class BigQuerySinkTask extends SinkTask {
             tableWriterBuilder = new GCSBatchTableWriter.Builder(
                 gcsToBQWriter,
                 table.getBaseTableId(),
-                config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG) + "/" + podName,
+                bucketName,
                 gcsBlobName,
                 recordConverter);
           } else {
@@ -564,7 +565,7 @@ public class BigQuerySinkTask extends SinkTask {
     GCSToBQLoadRunnable loadRunnable = new GCSToBQLoadRunnable(
             getBigQuery(),
             gcs,
-            config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG)+ "/" + podName,
+            bucketName,
             directoryPrefix,
             topicsToBaseTableIds);
     logger.debug("Value for topicsToBaseTableIds {}",topicsToBaseTableIds);
