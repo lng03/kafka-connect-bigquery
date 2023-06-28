@@ -65,6 +65,7 @@ public class GCSToBQLoadRunnable implements Runnable {
   public static final Pattern METADATA_TABLE_PATTERN =
           Pattern.compile("((?<project>[^:]+):)?(?<dataset>[^.]+)\\.(?<table>.+)");
 
+  private String podName = System.getenv("CONNECT_POD_NAME");
   /**
    * Create a {@link GCSToBQLoadRunnable} with the given bigquery, bucket, and ms wait interval.
    * @param bigQuery the {@link BigQuery} instance.
@@ -103,12 +104,22 @@ public class GCSToBQLoadRunnable implements Runnable {
     );
 //    Page<Blob> list = bucket.list(Storage.BlobListOption.prefix(directoryPrefix));
     logger.trace("Finished GCS bucket list");
+    logger.debug("getBlobsUpToLimit list: {}",list.size());
     logger.debug("getBlobsUpToLimit bucket: {}",bucket);
     logger.debug("Storage.BlobListOption.prefix(directoryPrefix) : {}",Storage.BlobListOption.prefix(directoryPrefix));
+
+    String blobName = null;
 
     for (Blob blob : list.iterateAll()) {
       logger.debug("bucket blob: {}",blob);
       logger.debug("blob.getBlobId(): {}",blob.getBlobId());
+      blobName = blob.getName();
+      String[] result = blobName.split("/",2);
+      if (podName.equalsIgnoreCase(result(0))){
+        blob.setBucket(blob.getBucket()+"/"+result(0));
+        blob.setName(result(1));
+      }
+
       BlobId blobId = blob.getBlobId();
       TableId table = getTableFromBlob(blob);
       logger.debug("Checking blob bucket={}, name={}, table={} ", blob.getBucket(), blob.getName(), table );
