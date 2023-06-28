@@ -104,25 +104,30 @@ public class GCSToBQLoadRunnable implements Runnable {
     );
 //    Page<Blob> list = bucket.list(Storage.BlobListOption.prefix(directoryPrefix));
     logger.trace("Finished GCS bucket list");
-    logger.debug("getBlobsUpToLimit list: {}",list.size());
-    logger.debug("getBlobsUpToLimit bucket: {}",bucket);
-    logger.debug("Storage.BlobListOption.prefix(directoryPrefix) : {}",Storage.BlobListOption.prefix(directoryPrefix));
+    logger.debug("getBlobsUpToLimit bucket: {}", bucket);
+    logger.debug("Storage.BlobListOption.prefix(directoryPrefix) : {}", Storage.BlobListOption.prefix(directoryPrefix));
 
     String blobName = null;
 
-    for (Blob blob : list.iterateAll()) {
-      logger.debug("bucket blob: {}",blob);
-      logger.debug("blob.getBlobId(): {}",blob.getBlobId());
-      blobName = blob.getName();
-      String[] result = blobName.split("/",2);
-      if (podName.equalsIgnoreCase(result(0))){
-        blob.setBucket(blob.getBucket()+"/"+result(0));
-        blob.setName(result(1));
-      }
+    for (Blob blob1 : list.iterateAll()) {
+      logger.debug("bucket blob: {}", blob1);
+      logger.debug("blob.getBlobId(): {}", blob1.getBlobId());
+      blobName = blob1.getName();
+      String[] result = blobName.split("/", 3);
+      /*if (podName.equalsIgnoreCase(result[0])){
 
+      }*/
+      Page<Blob> list1 = storage.list(
+              blob1.getBucket() + "/" + result[0],
+              Storage.BlobListOption.prefix(result[2])
+      );
+
+      for (Blob blob : list1.iterateAll()) {
+
+      
       BlobId blobId = blob.getBlobId();
       TableId table = getTableFromBlob(blob);
-      logger.debug("Checking blob bucket={}, name={}, table={} ", blob.getBucket(), blob.getName(), table );
+      logger.debug("Checking blob bucket={}, name={}, table={} ", blob.getBucket(), blob.getName(), table);
 
       if (table == null
               || claimedBlobIds.contains(blobId)
@@ -153,7 +158,7 @@ public class GCSToBQLoadRunnable implements Runnable {
         tableToCurrentLoadSize.put(table, newSize);
       }
     }
-
+  }
     logger.debug("Got blobs to upload: {}", tableToURIs);
     return tableToURIs;
   }
