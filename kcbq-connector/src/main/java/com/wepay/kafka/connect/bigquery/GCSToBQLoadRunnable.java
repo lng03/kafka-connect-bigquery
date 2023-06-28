@@ -65,7 +65,7 @@ public class GCSToBQLoadRunnable implements Runnable {
   public static final Pattern METADATA_TABLE_PATTERN =
           Pattern.compile("((?<project>[^:]+):)?(?<dataset>[^.]+)\\.(?<table>.+)");
 
-  private String podName = System.getenv("CONNECT_POD_NAME");
+  private static String podName = System.getenv("CONNECT_POD_NAME");
   /**
    * Create a {@link GCSToBQLoadRunnable} with the given bigquery, bucket, and ms wait interval.
    * @param bigQuery the {@link BigQuery} instance.
@@ -114,7 +114,7 @@ public class GCSToBQLoadRunnable implements Runnable {
       logger.debug("blob.getBlobId(): {}", blob.getBlobId());
 
       BlobId blobId = blob.getBlobId();
-      TableId table = podName + "/" + getTableFromBlob(blob);
+      TableId table = getTableFromBlob(blob);
 
       logger.debug("Checking blob bucket={}, name={}, table={} ", blob.getBucket(), blob.getName(), table);
 
@@ -186,7 +186,7 @@ public class GCSToBQLoadRunnable implements Runnable {
     String project = matcher.group("project");
     String dataset = matcher.group("dataset");
     String table =  matcher.group("table");
-
+    table = podName + "/" +table;
     logger.debug("Table data: project: {}; dataset: {}; table: {}", project, dataset, table);
     logger.info("Table data: project: {}; dataset: {}; table: {}", project, dataset, table);
     if (project == null) {
