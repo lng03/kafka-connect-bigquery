@@ -109,24 +109,13 @@ public class GCSToBQLoadRunnable implements Runnable {
 
     String blobName = null;
 
-    for (Blob blob1 : list.iterateAll()) {
-      logger.debug("bucket blob: {}", blob1);
-      logger.debug("blob.getBlobId(): {}", blob1.getBlobId());
-      blobName = blob1.getName();
-      String[] result = blobName.split("/", 3);
-      /*if (podName.equalsIgnoreCase(result[0])){
+    for (Blob blob : list.iterateAll()) {
+      logger.debug("bucket blob: {}", blob);
+      logger.debug("blob.getBlobId(): {}", blob.getBlobId());
 
-      }*/
-      Page<Blob> list1 = storage.list(
-              blob1.getBucket() + "/" + result[0],
-              Storage.BlobListOption.prefix(result[2])
-      );
-
-      for (Blob blob : list1.iterateAll()) {
-
-      
       BlobId blobId = blob.getBlobId();
-      TableId table = getTableFromBlob(blob);
+      TableId table = podName + "/" + getTableFromBlob(blob);
+
       logger.debug("Checking blob bucket={}, name={}, table={} ", blob.getBucket(), blob.getName(), table);
 
       if (table == null
@@ -158,7 +147,7 @@ public class GCSToBQLoadRunnable implements Runnable {
         tableToCurrentLoadSize.put(table, newSize);
       }
     }
-  }
+
     logger.debug("Got blobs to upload: {}", tableToURIs);
     return tableToURIs;
   }
