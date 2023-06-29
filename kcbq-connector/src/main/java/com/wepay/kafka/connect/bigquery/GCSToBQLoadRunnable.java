@@ -24,7 +24,7 @@ import com.google.cloud.bigquery.*;
 import com.google.cloud.storage.*;
 
 import com.wepay.kafka.connect.bigquery.write.row.GCSToBQWriter;
-
+import com.wepay.kafka.connect.bigquery.utils.FieldNameSanitizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,10 +116,12 @@ public class GCSToBQLoadRunnable implements Runnable {
       BlobId blobId = blob.getBlobId();
       TableId table = getTableFromBlob(blob);
 
+
       logger.debug("Checking blob bucket={}, name={}, table={} ", blob.getBucket(), blob.getName(), table);
       logger.debug("claimedBlobIds: {}", claimedBlobIds);
       logger.debug("deletableBlobIds: {}", deletableBlobIds);
       logger.debug("targetTableIds: {}", targetTableIds);
+
       if (table == null
               || claimedBlobIds.contains(blobId)
               || deletableBlobIds.contains(blobId)
@@ -188,7 +190,7 @@ public class GCSToBQLoadRunnable implements Runnable {
     String project = matcher.group("project");
     String dataset = matcher.group("dataset");
     String table =  matcher.group("table");
-    //table = podName + "/" +table;
+    table = FieldNameSanitizer.sanitizeName(table);
     logger.debug("Table data: project: {}; dataset: {}; table: {}", project, dataset, table);
     logger.info("Table data: project: {}; dataset: {}; table: {}", project, dataset, table);
     if (project == null) {
