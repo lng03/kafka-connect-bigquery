@@ -130,6 +130,8 @@ public class GCSToBQLoadRunnable implements Runnable {
         // 2. this blob is already claimed by a currently-running job or
         // 3. this blob is up for deletion.
         // 4. this blob is not targeted for our target  tables
+        logger.debug("Inside if block targetTableIds: {}", targetTableIds);
+        logger.debug("Inside if block table: {}", table);
         continue;
       }
 

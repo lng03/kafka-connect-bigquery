@@ -516,7 +516,7 @@ public class BigQuerySinkTask extends SinkTask {
                 "ERROR"
         ));
       }
-
+      tableName = FieldNameSanitizer.sanitizeName(tableName);
       TableId baseTableId = TableId.of(dataset, tableName);
       topicsToBaseTableIds.put(sLoadGCS,baseTableId);
     }
