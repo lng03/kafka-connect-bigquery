@@ -117,7 +117,9 @@ public class GCSToBQLoadRunnable implements Runnable {
       TableId table = getTableFromBlob(blob);
 
       logger.debug("Checking blob bucket={}, name={}, table={} ", blob.getBucket(), blob.getName(), table);
-
+      logger.debug("claimedBlobIds: {}", claimedBlobIds);
+      logger.debug("deletableBlobIds: {}", deletableBlobIds);
+      logger.debug("targetTableIds: {}", targetTableIds);
       if (table == null
               || claimedBlobIds.contains(blobId)
               || deletableBlobIds.contains(blobId)
@@ -186,7 +188,7 @@ public class GCSToBQLoadRunnable implements Runnable {
     String project = matcher.group("project");
     String dataset = matcher.group("dataset");
     String table =  matcher.group("table");
-    table = podName + "/" +table;
+    //table = podName + "/" +table;
     logger.debug("Table data: project: {}; dataset: {}; table: {}", project, dataset, table);
     logger.info("Table data: project: {}; dataset: {}; table: {}", project, dataset, table);
     if (project == null) {
