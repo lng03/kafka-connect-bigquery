@@ -496,9 +496,9 @@ public class BigQuerySinkTask extends SinkTask {
             config.getBoolean(BigQuerySinkConfig.SANITIZE_TOPICS_CONFIG);
 
     List<String> loadGCS = config.getList(BigQuerySinkConfig.ENABLE_BATCH_CONFIG);
-
+    logger.debug("loadGCS: {}", loadGCS);
     for(String sLoadGCS : loadGCS) {
-
+      logger.debug("Inside for loadGCS: {}", sLoadGCS);
       String tableName;
       String dataset = config.getString(BigQuerySinkConfig.DEFAULT_DATASET_CONFIG);
       String[] smtReplacement = sLoadGCS.split(":");
