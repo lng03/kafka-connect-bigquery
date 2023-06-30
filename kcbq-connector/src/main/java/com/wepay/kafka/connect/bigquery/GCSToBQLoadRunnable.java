@@ -145,12 +145,21 @@ public class GCSToBQLoadRunnable implements Runnable {
       logger.debug("tableToURIs: {}", tableToURIs);
       logger.debug("tableToURIs.get(table): {}", tableToURIs.get(table));
       logger.debug("tableToURIs.get(table).size(): {}", tableToURIs.get(table).size());
+      logger.debug("tableToCurrentLoadSize: {}", tableToCurrentLoadSize);
+      logger.debug("tableToCurrentLoadSize.get(table): {}", tableToCurrentLoadSize.get(table));
+      logger.debug("blob.getSize(): {}", blob.getSize());
+
       long newSize = tableToCurrentLoadSize.get(table) + blob.getSize();
+      logger.debug("newSize: {}", newSize);
       // if this file does not cause us to exceed our per-request quota limits...
       if (newSize < MAX_LOAD_SIZE_B && tableToURIs.get(table).size() < FILE_LOAD_LIMIT) {
+        logger.debug("Inside newsize check");
         // ...add the file (and update the load size)
         tableToURIs.get(table).add(blob);
         tableToCurrentLoadSize.put(table, newSize);
+
+        logger.debug("Inside newsize tableToURIs: {}", tableToURIs);
+        logger.debug("Inside newsize tableToCurrentLoadSize: {}", tableToCurrentLoadSize);
       }
     }
 
