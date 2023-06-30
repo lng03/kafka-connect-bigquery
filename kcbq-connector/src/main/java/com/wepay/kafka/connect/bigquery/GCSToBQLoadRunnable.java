@@ -329,7 +329,8 @@ public class GCSToBQLoadRunnable implements Runnable {
     Blob blob = storage.get(blobId);
     String blobName = blob.getName();
     logger.debug("Inside GCStoBQ blobName {}",blobName);
-    String directory = blobName.substring(0, blobName.indexOf('/'));
+    //String directory = blobName.substring(0, blobName.indexOf('/'));
+    String directory = blobName.substring(0, blobName.lastIndexOf('/'));
     logger.debug("Inside GCStoBQ directory {}",directory);
     logger.debug("Inside GCStoBQ directory 111{}",blobName.substring(0, blobName.lastIndexOf('/')));
     String jsonName = blobName.substring(blobName.lastIndexOf('/') + 1);
@@ -409,15 +410,14 @@ public class GCSToBQLoadRunnable implements Runnable {
     try {
       logger.trace("Checking for finished job statuses. Moving uploaded blobs from claimed to deletable.");
       checkJobs();
-      /*logger.trace("Deleting deletable blobs");
-      deleteBlobs();*/
+      logger.trace("Deleting deletable blobs");
+      deleteBlobs();
       logger.trace("Finding new blobs to load into BQ");
       Map<TableId, List<Blob>> tablesToSourceURIs = getBlobsUpToLimit();
       logger.trace("Loading {} new blobs into BQ", tablesToSourceURIs.size());
       triggerBigQueryLoadJobs(tablesToSourceURIs);
       logger.trace("Finished BQ load run");
-      logger.trace("Deleting deletable blobs");
-      deleteBlobs();
+
     } catch (Exception e) {
       logger.error("Uncaught error in BQ loader", e);
     }
