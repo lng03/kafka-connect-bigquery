@@ -247,8 +247,11 @@ public class GCSToBQLoadRunnable implements Runnable {
     Job job = bigQuery.create(JobInfo.of(loadJobConfiguration));
     // update active jobs and claimed blobs.
     List<BlobId> blobIds = blobs.stream().map(Blob::getBlobId).collect(Collectors.toList());
+    logger.debug("inside triggerBigQueryLoadJob blobIds: {}",blobIds);
     activeJobs.put(job, blobIds);
     claimedBlobIds.addAll(blobIds);
+    logger.debug("inside triggerBigQueryLoadJob activeJobs: {}",activeJobs);
+    logger.debug("inside triggerBigQueryLoadJob claimedBlobIds: {}",claimedBlobIds);
     logger.info("Triggered load job for table {} with {} blobs.", table, blobs.size());
     return job;
   }
@@ -283,6 +286,7 @@ public class GCSToBQLoadRunnable implements Runnable {
           JobStatistics.LoadStatistics stats = job.getStatistics();
           logger.trace("Job is row count: id={}, count={}", job.getJobId(), stats.getOutputRows());
           logger.trace("Job is marked done: id={}, status={}", job.getJobId(), job.getStatus());
+          logger.debug("Job is marked done: id={}, status={}", job.getJobId(), job.getStatus());
           List<BlobId> blobIdsToDelete = jobEntry.getValue();
           jobIterator.remove();
           logger.trace("Job is removed from iterator: {}", job.getJobId());
@@ -290,6 +294,7 @@ public class GCSToBQLoadRunnable implements Runnable {
           claimedBlobIds.removeAll(blobIdsToDelete);
           logger.trace("Completed blobs have been removed from claimed set: {}", blobIdsToDelete);
           deletableBlobIds.addAll(blobIdsToDelete);
+          logger.debug(" active jobs to delete : {}",deletableBlobIds);
           logger.trace("Completed blobs marked as deletable: {}", blobIdsToDelete);
         }
       } catch (BigQueryException | InterruptedException ex) {
@@ -311,6 +316,7 @@ public class GCSToBQLoadRunnable implements Runnable {
   private List<BlobId> archiveBlobs(List<BlobId> blobIdsToDelete) {
     List<BlobId> resultList = new ArrayList<>();
     for (BlobId blobId: blobIdsToDelete){
+      logger.debug("Inside archiveBlobs {}",blobId);
       if(!moveBlob(blobId)) {
         resultList.add(blobId);
       }
@@ -325,8 +331,9 @@ public class GCSToBQLoadRunnable implements Runnable {
     logger.debug("Inside GCStoBQ blobName {}",blobName);
     String directory = blobName.substring(0, blobName.indexOf('/'));
     logger.debug("Inside GCStoBQ directory {}",directory);
+    logger.debug("Inside GCStoBQ directory 111{}",blobName.substring(0, blobName.lastIndexOf('/')));
     String jsonName = blobName.substring(blobName.lastIndexOf('/') + 1);
-    logger.debug("Inside GCStoBQ jsonName {}",directory);
+    logger.debug("Inside GCStoBQ jsonName {}",jsonName);
     String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
     String targetName = String.format("archive/%s/dt=%s/%s",
             directory,
@@ -402,13 +409,15 @@ public class GCSToBQLoadRunnable implements Runnable {
     try {
       logger.trace("Checking for finished job statuses. Moving uploaded blobs from claimed to deletable.");
       checkJobs();
-      logger.trace("Deleting deletable blobs");
-      deleteBlobs();
+      /*logger.trace("Deleting deletable blobs");
+      deleteBlobs();*/
       logger.trace("Finding new blobs to load into BQ");
       Map<TableId, List<Blob>> tablesToSourceURIs = getBlobsUpToLimit();
       logger.trace("Loading {} new blobs into BQ", tablesToSourceURIs.size());
       triggerBigQueryLoadJobs(tablesToSourceURIs);
       logger.trace("Finished BQ load run");
+      logger.trace("Deleting deletable blobs");
+      deleteBlobs();
     } catch (Exception e) {
       logger.error("Uncaught error in BQ loader", e);
     }
