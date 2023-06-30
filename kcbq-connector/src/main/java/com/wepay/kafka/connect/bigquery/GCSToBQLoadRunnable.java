@@ -408,15 +408,17 @@ public class GCSToBQLoadRunnable implements Runnable {
   public void run() {
     logger.trace("Starting BQ load run");
     try {
-      logger.trace("Checking for finished job statuses. Moving uploaded blobs from claimed to deletable.");
+      logger.debug("Checking for finished job statuses. Moving uploaded blobs from claimed to deletable.");
       checkJobs();
-      logger.trace("Deleting deletable blobs");
-      deleteBlobs();
-      logger.trace("Finding new blobs to load into BQ");
+     /* logger.trace("Deleting deletable blobs");
+      deleteBlobs();*/
+      logger.debug("Finding new blobs to load into BQ");
       Map<TableId, List<Blob>> tablesToSourceURIs = getBlobsUpToLimit();
-      logger.trace("Loading {} new blobs into BQ", tablesToSourceURIs.size());
+      logger.debug("Loading {} new blobs into BQ", tablesToSourceURIs.size());
       triggerBigQueryLoadJobs(tablesToSourceURIs);
-      logger.trace("Finished BQ load run");
+      logger.debug("Finished BQ load run");
+      logger.debug("Deleting deletable blobs");
+      deleteBlobs();
 
     } catch (Exception e) {
       logger.error("Uncaught error in BQ loader", e);
