@@ -252,9 +252,11 @@ public class BigQuerySinkTask extends SinkTask {
     for (SinkRecord record : records) {
       if (record.value() != null || config.getBoolean(BigQuerySinkConfig.DELETE_ENABLED_CONFIG)) {
         PartitionedTableId table = getRecordTable(record);
+        logger.debug("Inside for block of SinkRecord {}",table);
         if (!tableWriterBuilders.containsKey(table)) {
           TableWriterBuilder tableWriterBuilder;
-          if (config.getList(BigQuerySinkConfig.ENABLE_BATCH_CONFIG).contains(record.topic())) {
+          if (podName + "/" +config.getList(BigQuerySinkConfig.ENABLE_BATCH_CONFIG).contains(record.topic())) {
+            logger.debug("Inside if block of ENABLE_BATCH_CONFIG {}",record.topic());
             String topic = record.topic();
             long offset = record.kafkaOffset();
             String gcsBlobName = topic + "_" + uuid + "_" + Instant.now().toEpochMilli()+"_"+records.size()+"_"+offset;
@@ -283,8 +285,10 @@ public class BigQuerySinkTask extends SinkTask {
             tableWriterBuilder = simpleTableWriterBuilder;
           }
           tableWriterBuilders.put(table, tableWriterBuilder);
+          logger.debug("tableWriterBuilders.get(table) {}",tableWriterBuilders.get(table));
         }
         tableWriterBuilders.get(table).addRow(record, table.getBaseTableId());
+        logger.debug("tableWriterBuilders addrow {}",tableWriterBuilders.get(table));
       }
     }
 
