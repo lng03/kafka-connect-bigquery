@@ -244,7 +244,7 @@ public class BigQuerySinkTask extends SinkTask {
     executor.maybeThrowEncounteredError();
 
     logger.debug("Putting {} records in the sink.", records.size());
-
+    String batchMode = podName + "/" +config.getList(BigQuerySinkConfig.ENABLE_BATCH_CONFIG);
     // create tableWriters
     Map<PartitionedTableId, TableWriterBuilder> tableWriterBuilders = new HashMap<>();
     String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG);
@@ -255,7 +255,7 @@ public class BigQuerySinkTask extends SinkTask {
         logger.debug("Inside for block of SinkRecord {}",table);
         if (!tableWriterBuilders.containsKey(table)) {
           TableWriterBuilder tableWriterBuilder;
-          if (podName + "/" +config.getList(BigQuerySinkConfig.ENABLE_BATCH_CONFIG).contains(record.topic())) {
+          if (batchMode.contains(record.topic())) {
             logger.debug("Inside if block of ENABLE_BATCH_CONFIG {}",record.topic());
             String topic = record.topic();
             long offset = record.kafkaOffset();
