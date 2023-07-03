@@ -104,23 +104,12 @@ public class GCSToBQLoadRunnable implements Runnable {
     );
 //    Page<Blob> list = bucket.list(Storage.BlobListOption.prefix(directoryPrefix));
     logger.trace("Finished GCS bucket list");
-    logger.debug("getBlobsUpToLimit bucket: {}", bucket);
-    logger.debug("Storage.BlobListOption.prefix(directoryPrefix) : {}", Storage.BlobListOption.prefix(directoryPrefix));
 
     String blobName = null;
 
     for (Blob blob : list.iterateAll()) {
-      logger.debug("bucket blob: {}", blob);
-      logger.debug("blob.getBlobId(): {}", blob.getBlobId());
-
       BlobId blobId = blob.getBlobId();
       TableId table = getTableFromBlob(blob);
-
-
-      logger.debug("Checking blob bucket={}, name={}, table={} ", blob.getBucket(), blob.getName(), table);
-      logger.debug("claimedBlobIds: {}", claimedBlobIds);
-      logger.debug("deletableBlobIds: {}", deletableBlobIds);
-      logger.debug("targetTableIds: {}", targetTableIds);
 
       if (table == null
               || claimedBlobIds.contains(blobId)
@@ -130,8 +119,6 @@ public class GCSToBQLoadRunnable implements Runnable {
         // 2. this blob is already claimed by a currently-running job or
         // 3. this blob is up for deletion.
         // 4. this blob is not targeted for our target  tables
-        logger.debug("Inside if block targetTableIds: {}", targetTableIds);
-        logger.debug("Inside if block table: {}", table);
         continue;
       }
 
@@ -139,31 +126,16 @@ public class GCSToBQLoadRunnable implements Runnable {
         // initialize maps, if we haven't seen this table before.
         tableToURIs.put(table, new ArrayList<>());
         tableToCurrentLoadSize.put(table, 0L);
-        logger.debug("Inside tableToURIs: {}", tableToURIs);
-        logger.debug("Inside tableToURIs.get(table): {}", tableToURIs.get(table));
-      }
-      logger.debug("tableToURIs: {}", tableToURIs);
-      logger.debug("tableToURIs.get(table): {}", tableToURIs.get(table));
-      logger.debug("tableToURIs.get(table).size(): {}", tableToURIs.get(table).size());
-      logger.debug("tableToCurrentLoadSize: {}", tableToCurrentLoadSize);
-      logger.debug("tableToCurrentLoadSize.get(table): {}", tableToCurrentLoadSize.get(table));
-      logger.debug("blob.getSize(): {}", blob.getSize());
+        }
 
       long newSize = tableToCurrentLoadSize.get(table) + blob.getSize();
-      logger.debug("newSize: {}", newSize);
       // if this file does not cause us to exceed our per-request quota limits...
       if (newSize < MAX_LOAD_SIZE_B && tableToURIs.get(table).size() < FILE_LOAD_LIMIT) {
-        logger.debug("Inside newsize check");
         // ...add the file (and update the load size)
         tableToURIs.get(table).add(blob);
         tableToCurrentLoadSize.put(table, newSize);
-
-        logger.debug("Inside newsize tableToURIs: {}", tableToURIs);
-        logger.debug("Inside newsize tableToCurrentLoadSize: {}", tableToCurrentLoadSize);
-      }
+        }
     }
-
-    logger.debug("Got blobs to upload: {}", tableToURIs);
     return tableToURIs;
   }
 
@@ -174,14 +146,6 @@ public class GCSToBQLoadRunnable implements Runnable {
    *         table it should be loaded into.
    */
   public static TableId getTableFromBlob(Blob blob) {
-
-    //
-
-    logger.debug("Inside getTableFromBlob");
-    logger.debug("blob.getMetadata(): {}",blob.getMetadata());
-    logger.debug("blob.getBucket(): {}",blob.getBucket());
-    logger.debug("blob.getName(): {}",blob.getName());
-    logger.debug("GCSToBQWriter.GCS_METADATA_TABLE_KEY: {}",blob.getMetadata().get(GCSToBQWriter.GCS_METADATA_TABLE_KEY));
 
     if (blob.getMetadata() == null
         || blob.getMetadata().get(GCSToBQWriter.GCS_METADATA_TABLE_KEY) == null) {
@@ -201,8 +165,6 @@ public class GCSToBQLoadRunnable implements Runnable {
     String project = matcher.group("project");
     String dataset = matcher.group("dataset");
     String table =  matcher.group("table");
-    //table = FieldNameSanitizer.sanitizeName(table);
-    logger.debug("Table data: project: {}; dataset: {}; table: {}", project, dataset, table);
     logger.info("Table data: project: {}; dataset: {}; table: {}", project, dataset, table);
     if (project == null) {
       return TableId.of(dataset, table);
@@ -220,10 +182,8 @@ public class GCSToBQLoadRunnable implements Runnable {
    */
   private Map<Job, List<Blob>> triggerBigQueryLoadJobs(Map<TableId, List<Blob>> tablesToBlobs) {
     Map<Job, List<Blob>> newJobs = new HashMap<>(tablesToBlobs.size());
-    logger.debug("tablesToBlobs: {}", tablesToBlobs);
+
     for (Map.Entry<TableId, List<Blob>> entry : tablesToBlobs.entrySet()) {
-      logger.debug("entry.getKey(): {}", entry.getKey());
-      logger.debug("entry.getValue(): {}", entry.getValue());
       newJobs.put(triggerBigQueryLoadJob(entry.getKey(), entry.getValue()), entry.getValue());
     }
     return newJobs;
@@ -236,7 +196,7 @@ public class GCSToBQLoadRunnable implements Runnable {
                                                      b.getName()))
                              .collect(Collectors.toList());
     // create job load configuration
-    logger.debug("uris: {}",uris);
+
     LoadJobConfiguration loadJobConfiguration =
         LoadJobConfiguration.newBuilder(table, uris)
             .setFormatOptions(FormatOptions.json())
@@ -247,11 +207,9 @@ public class GCSToBQLoadRunnable implements Runnable {
     Job job = bigQuery.create(JobInfo.of(loadJobConfiguration));
     // update active jobs and claimed blobs.
     List<BlobId> blobIds = blobs.stream().map(Blob::getBlobId).collect(Collectors.toList());
-    logger.debug("inside triggerBigQueryLoadJob blobIds: {}",blobIds);
+
     activeJobs.put(job, blobIds);
     claimedBlobIds.addAll(blobIds);
-    logger.debug("inside triggerBigQueryLoadJob activeJobs: {}",activeJobs);
-    logger.debug("inside triggerBigQueryLoadJob claimedBlobIds: {}",claimedBlobIds);
     logger.info("Triggered load job for table {} with {} blobs.", table, blobs.size());
     return job;
   }
@@ -286,7 +244,6 @@ public class GCSToBQLoadRunnable implements Runnable {
           JobStatistics.LoadStatistics stats = job.getStatistics();
           logger.trace("Job is row count: id={}, count={}", job.getJobId(), stats.getOutputRows());
           logger.trace("Job is marked done: id={}, status={}", job.getJobId(), job.getStatus());
-          logger.debug("Job is marked done: id={}, status={}", job.getJobId(), job.getStatus());
           List<BlobId> blobIdsToDelete = jobEntry.getValue();
           jobIterator.remove();
           logger.trace("Job is removed from iterator: {}", job.getJobId());
@@ -294,7 +251,6 @@ public class GCSToBQLoadRunnable implements Runnable {
           claimedBlobIds.removeAll(blobIdsToDelete);
           logger.trace("Completed blobs have been removed from claimed set: {}", blobIdsToDelete);
           deletableBlobIds.addAll(blobIdsToDelete);
-          logger.debug(" active jobs to delete : {}",deletableBlobIds);
           logger.trace("Completed blobs marked as deletable: {}", blobIdsToDelete);
         }
       } catch (BigQueryException | InterruptedException ex) {
@@ -316,7 +272,6 @@ public class GCSToBQLoadRunnable implements Runnable {
   private List<BlobId> archiveBlobs(List<BlobId> blobIdsToDelete) {
     List<BlobId> resultList = new ArrayList<>();
     for (BlobId blobId: blobIdsToDelete){
-      logger.debug("Inside archiveBlobs {}",blobId);
       if(!moveBlob(blobId)) {
         resultList.add(blobId);
       }
@@ -328,20 +283,15 @@ public class GCSToBQLoadRunnable implements Runnable {
     String bucketName = bucket;
     Blob blob = storage.get(blobId);
     String blobName = blob.getName();
-    logger.debug("Inside GCStoBQ blobName {}",blobName);
     //String directory = blobName.substring(0, blobName.indexOf('/'));
     String directory = blobName.substring(0, blobName.lastIndexOf('/'));
-    logger.debug("Inside GCStoBQ directory {}",directory);
-    logger.debug("Inside GCStoBQ directory 111{}",blobName.substring(0, blobName.lastIndexOf('/')));
     String jsonName = blobName.substring(blobName.lastIndexOf('/') + 1);
-    logger.debug("Inside GCStoBQ jsonName {}",jsonName);
     String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
     String targetName = String.format("archive/%s/dt=%s/%s",
             directory,
             date,
             jsonName
     );
-    logger.debug("Inside GCStoBQ targetName {}",targetName);
     return blob.copyTo(bucketName, targetName).isDone();
   }
 
@@ -408,16 +358,16 @@ public class GCSToBQLoadRunnable implements Runnable {
   public void run() {
     logger.trace("Starting BQ load run");
     try {
-      logger.debug("Checking for finished job statuses. Moving uploaded blobs from claimed to deletable.");
+      logger.trace("Checking for finished job statuses. Moving uploaded blobs from claimed to deletable.");
       checkJobs();
      /* logger.trace("Deleting deletable blobs");
       deleteBlobs();*/
-      logger.debug("Finding new blobs to load into BQ");
+      logger.trace("Finding new blobs to load into BQ");
       Map<TableId, List<Blob>> tablesToSourceURIs = getBlobsUpToLimit();
-      logger.debug("Loading {} new blobs into BQ", tablesToSourceURIs.size());
+      logger.trace("Loading {} new blobs into BQ", tablesToSourceURIs.size());
       triggerBigQueryLoadJobs(tablesToSourceURIs);
-      logger.debug("Finished BQ load run");
-      logger.debug("Deleting deletable blobs");
+      logger.trace("Finished BQ load run");
+      logger.trace("Deleting deletable blobs");
       deleteBlobs();
 
     } catch (Exception e) {

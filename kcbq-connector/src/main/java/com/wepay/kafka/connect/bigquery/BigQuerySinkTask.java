@@ -248,26 +248,19 @@ public class BigQuerySinkTask extends SinkTask {
     // create tableWriters
     Map<PartitionedTableId, TableWriterBuilder> tableWriterBuilders = new HashMap<>();
     String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG);
-    logger.debug("Value for bucketName {}",bucketName);
     for (SinkRecord record : records) {
       if (record.value() != null || config.getBoolean(BigQuerySinkConfig.DELETE_ENABLED_CONFIG)) {
         PartitionedTableId table = getRecordTable(record);
-        logger.debug("Inside for block of SinkRecord {}",table);
         if (!tableWriterBuilders.containsKey(table)) {
           TableWriterBuilder tableWriterBuilder;
           if (batchMode.contains(record.topic())) {
-            logger.debug("Inside if block of ENABLE_BATCH_CONFIG {}",record.topic());
             String topic = record.topic();
             long offset = record.kafkaOffset();
             String gcsBlobName = topic + "_" + uuid + "_" + Instant.now().toEpochMilli()+"_"+records.size()+"_"+offset;
-            logger.debug("Value for podName {}",podName);
             String gcsFolderName = podName + "/" + config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
-           // String gcsFolderName =  config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
-            logger.debug("Value for gcsFolderName {}",gcsFolderName);
 
             if (gcsFolderName != null && !"".equals(gcsFolderName)) {
               gcsBlobName = gcsFolderName + "/" + gcsBlobName ;
-              logger.debug("Value for gcsBlobName {}",gcsBlobName);
             }
             tableWriterBuilder = new GCSBatchTableWriter.Builder(
                 gcsToBQWriter,
@@ -285,10 +278,8 @@ public class BigQuerySinkTask extends SinkTask {
             tableWriterBuilder = simpleTableWriterBuilder;
           }
           tableWriterBuilders.put(table, tableWriterBuilder);
-          logger.debug("tableWriterBuilders.get(table) {}",tableWriterBuilders.get(table));
         }
         tableWriterBuilders.get(table).addRow(record, table.getBaseTableId());
-        logger.debug("tableWriterBuilders addrow {}",tableWriterBuilders.get(table));
       }
     }
 
@@ -500,9 +491,7 @@ public class BigQuerySinkTask extends SinkTask {
             config.getBoolean(BigQuerySinkConfig.SANITIZE_TOPICS_CONFIG);
 
     List<String> loadGCS = config.getList(BigQuerySinkConfig.ENABLE_BATCH_CONFIG);
-    logger.debug("loadGCS: {}", loadGCS);
     for(String sLoadGCS : loadGCS) {
-      logger.debug("Inside for loadGCS: {}", sLoadGCS);
       String tableName;
       String dataset = config.getString(BigQuerySinkConfig.DEFAULT_DATASET_CONFIG);
       String[] smtReplacement = sLoadGCS.split(":");
@@ -520,9 +509,7 @@ public class BigQuerySinkTask extends SinkTask {
                 "ERROR"
         ));
       }
-      logger.debug("before sanitize tableName: {}", tableName);
       tableName = FieldNameSanitizer.sanitizeName(tableName);
-      logger.debug("after sanitize tableName: {}", tableName);
       TableId baseTableId = TableId.of(dataset, tableName);
       topicsToBaseTableIds.put(sLoadGCS,baseTableId);
     }
@@ -544,8 +531,6 @@ public class BigQuerySinkTask extends SinkTask {
     String bucketName = config.getString(BigQuerySinkConfig.GCS_BUCKET_NAME_CONFIG);
 
     String directoryPrefix =  podName + "/" +config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
-  //  String directoryPrefix =  config.getString(BigQuerySinkConfig.GCS_FOLDER_NAME_CONFIG);
-    logger.debug("Value for directoryPrefix {}",directoryPrefix);
     Storage gcs = getGcs();
     // get the bucket, or create it if it does not exist.
 //    Bucket bucket = gcs.get(bucketName);
@@ -593,7 +578,6 @@ public class BigQuerySinkTask extends SinkTask {
       maybeStopExecutor(executor, "table write executor");
       if (upsertDelete) {
         mergeBatches.intermediateTables().forEach(table -> {
-          logger.debug("Deleting {}", intTable(table));
           getBigQuery().delete(table);
         });
       }
