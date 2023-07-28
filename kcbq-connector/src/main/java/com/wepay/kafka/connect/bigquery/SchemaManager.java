@@ -396,8 +396,12 @@ public class SchemaManager {
       }
     }
 
-    checkState(firstField.getName().equals(secondField.getName()));
-    checkState(firstField.getType() == secondField.getType());
+    checkState(firstField.getName().equalsIgnoreCase(secondField.getName()),
+            String.format("Cannot perform union operation on two fields having different names. " +
+                    "Field names are '%s' and '%s'.", firstField.getName(), secondField.getName()));
+    checkState(firstField.getType() == secondField.getType(),
+            String.format("Cannot perform union operation on two fields having different datatypes. " +
+                    "Field name is '%s' and datatypes are '%s' and '%s'.", firstField.getName(), firstField.getType(), secondField.getType()));
 
     Field.Builder retBuilder = firstField.toBuilder();
     if (isFieldRelaxation(firstField, secondField)) {
@@ -474,7 +478,7 @@ public class SchemaManager {
     for (Map.Entry<String, Field> entry : proposedSchemaFields.entrySet()) {
       if (!earliestSchemaFields.containsKey(entry.getKey())) {
         if (!isValidFieldAddition(entry.getValue())) {
-          throw new BigQueryConnectException("New Field found with the name " + entry.getKey()
+          throw new BigQueryConnectException("New Field found with the name " + entry.getValue().getName()
               + " Ensure that " + BigQuerySinkConfig.ALLOW_NEW_BIGQUERY_FIELDS_CONFIG + " is true and "
               + BigQuerySinkConfig.ALLOW_BIGQUERY_REQUIRED_FIELD_RELAXATION_CONFIG +
               " is true if " + entry.getKey() + " has mode REQUIRED in order to update the Schema");
@@ -544,7 +548,7 @@ public class SchemaManager {
       if (field.getMode() == null) {
         field = field.toBuilder().setMode(Mode.NULLABLE).build();
       }
-      result.put(field.getName(), field);
+      result.put(field.getName().toLowerCase(), field);
     });
     return result;
   }
@@ -561,7 +565,7 @@ public class SchemaManager {
       if (field.getMode() == null) {
         field = field.toBuilder().setMode(Field.Mode.NULLABLE).build();
       }
-      result.put(field.getName(), field);
+      result.put(field.getName().toLowerCase(), field);
     });
     return result;
   }

@@ -130,7 +130,7 @@ public abstract class BaseConnectorIT {
   protected Map<String, String> baseConnectorProps(int tasksMax) {
     Map<String, String> result = new HashMap<>();
 
-    result.put(CONNECTOR_CLASS_CONFIG, "BigQuerySinkConnector");
+    result.put(CONNECTOR_CLASS_CONFIG, "com.wepay.kafka.connect.bigquery.BigQuerySinkConnector");
     result.put(TASKS_MAX_CONFIG, Integer.toString(tasksMax));
 
     result.put(BigQuerySinkConfig.PROJECT_CONFIG, project());
@@ -139,7 +139,7 @@ public abstract class BaseConnectorIT {
     result.put(BigQuerySinkConfig.KEY_SOURCE_CONFIG, keySource());
 
     result.put(BigQuerySinkConfig.SANITIZE_TOPICS_CONFIG, "true");
-
+    result.put(BigQuerySinkConfig.USE_STORAGE_WRITE_API_CONFIG, "false");
     return result;
   }
 

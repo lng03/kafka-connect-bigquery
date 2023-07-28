@@ -28,6 +28,7 @@ import com.wepay.kafka.connect.bigquery.convert.BigQuerySchemaConverter;
 import com.wepay.kafka.connect.bigquery.convert.RecordConverter;
 import com.wepay.kafka.connect.bigquery.convert.SchemaConverter;
 import com.wepay.kafka.connect.bigquery.retrieve.IdentitySchemaRetriever;
+import com.wepay.kafka.connect.bigquery.utils.FieldNameSanitizer;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.Config;
 import org.apache.kafka.common.config.ConfigDef;
@@ -40,11 +41,7 @@ import org.apache.kafka.connect.sink.SinkConnector;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -162,6 +159,73 @@ public class BigQuerySinkConfig extends AbstractConfig {
       "Whether to automatically sanitize topic names before using them as table names;"
       + " if not enabled topic names will be used directly as table names";
 
+  public static final String TOPIC2TABLE_MAP_CONFIG =                     "topic2TableMap";
+  private static final ConfigDef.Type TOPIC2TABLE_MAP_TYPE =              ConfigDef.Type.STRING;
+  public static final String TOPIC2TABLE_MAP_DEFAULT = "";
+  private static final ConfigDef.Importance TOPIC2TABLE_MAP_IMPORTANCE =  ConfigDef.Importance.LOW;
+  public static final String TOPIC2TABLE_MAP_DOC = "Map of topics to tables (optional). "
+          + "Format: comma-separated tuples, e.g. <topic-1>:<table-1>,<topic-2>:<table-2>,... " +
+          "Note that topic name should not be modified using regex SMT while using this option." +
+          "Also note that SANITIZE_TOPICS_CONFIG would be ignored if this config is set." +
+          "Lastly, if the topic2table map doesn't contain the topic for a record, a table" +
+          " with the same name as the topic name would be created";
+  private static final ConfigDef.Validator TOPIC2TABLE_MAP_VALIDATOR = (name, value) -> {
+    String topic2TableMapString = (String) ConfigDef.parseType(name, value, TOPIC2TABLE_MAP_TYPE);
+
+    if (topic2TableMapString.isEmpty()) {
+      return;
+    }
+
+    Map<String, String> topic2TableMap = new HashMap<>();
+
+    for (String str : topic2TableMapString.split(",")) {
+      String[] tt = str.split(":");
+
+      if (tt.length != 2) {
+        throw new ConfigException(
+                name,
+                topic2TableMapString,
+                "One of the topic to table mappings has an invalid format."
+        );
+      }
+
+      String topic = tt[0].trim();
+      String table = tt[1].trim();
+
+      if (topic.isEmpty() || table.isEmpty()) {
+        throw new ConfigException(
+                name,
+                topic2TableMapString,
+                "One of the topic to table mappings has an invalid format."
+        );
+      }
+
+      if (topic2TableMap.containsKey(topic)) {
+        throw new ConfigException(
+                name,
+                name,
+                String.format(
+                        "The topic name %s is duplicated. Topic names cannot be duplicated.",
+                        topic
+                )
+        );
+      }
+
+      if (topic2TableMap.containsValue(table)) {
+        throw new ConfigException(
+                name,
+                topic2TableMapString,
+                String.format(
+                        "The table name %s is duplicated. Table names cannot be duplicated.",
+                        table
+                )
+        );
+      }
+      topic2TableMap.put(topic, table);
+    }
+  };
+
+
   public static final String SANITIZE_FIELD_NAME_CONFIG =                     "sanitizeFieldNames";
   private static final ConfigDef.Type SANITIZE_FIELD_NAME_TYPE =              ConfigDef.Type.BOOLEAN;
   public static final Boolean SANITIZE_FIELD_NAME_DEFAULT =                   false;
@@ -265,6 +329,29 @@ public class BigQuerySinkConfig extends AbstractConfig {
       + "tables, and periodic merge flushes. Row-matching will be performed based on the contents " 
       + "of record keys.";
 
+  public static final String USE_STORAGE_WRITE_API_CONFIG = "useStorageWriteApi";
+
+  private static final ConfigDef.Type USE_STORAGE_WRITE_API_TYPE = ConfigDef.Type.BOOLEAN;
+  public static final boolean USE_STORAGE_WRITE_API_DEFAULT = false;
+  private static final ConfigDef.Importance USE_STORAGE_WRITE_API_IMPORTANCE = ConfigDef.Importance.MEDIUM;
+  private static final String USE_STORAGE_WRITE_API_DOC =
+          "Use Google's New Storage Write API for data streaming. Not available for upsert/delete mode";
+
+  public static final String ENABLE_BATCH_MODE_CONFIG = "enableBatchMode";
+  private static final ConfigDef.Type ENABLE_BATCH_MODE_TYPE = ConfigDef.Type.BOOLEAN;
+  public static final boolean ENABLE_BATCH_MODE_DEFAULT = false;
+  private static final ConfigDef.Importance ENABLE_BATCH_MODE_IMPORTANCE = ConfigDef.Importance.LOW;
+  private static final String ENABLE_BATCH_MODE_DOC = "Use Google's New Storage Write API with batch mode";
+
+  public static final String COMMIT_INTERVAL_SEC_CONFIG = "commitInterval";
+  private static final ConfigDef.Type COMMIT_INTERVAL_SEC_TYPE = ConfigDef.Type.INT;
+  private static final Integer COMMIT_INTERVAL_SEC_DEFAULT = 60;
+
+  private static final ConfigDef.Validator COMMIT_INTERVAL_VALIDATOR = ConfigDef.Range.between(60, 14400); // currently allows 1 min -> 4 hours
+  private static final ConfigDef.Importance COMMIT_INTERVAL_SEC_IMPORTANCE = ConfigDef.Importance.LOW;
+  private static final String COMMIT_INTERVAL_SEC_DOC =
+          "The interval, in seconds, in which to attempt to commit streamed records.";
+
   public static final String DELETE_ENABLED_CONFIG =                    "deleteEnabled";
   private static final ConfigDef.Type DELETE_ENABLED_TYPE =             ConfigDef.Type.BOOLEAN;
   public static final boolean DELETE_ENABLED_DEFAULT =                  false;
@@ -287,6 +374,7 @@ public class BigQuerySinkConfig extends AbstractConfig {
       + "suffix.";
 
   public static final String MERGE_INTERVAL_MS_CONFIG =                    "mergeIntervalMs";
+  public static final String MERGE_RECORDS_THRESHOLD_CONFIG =                    "mergeRecordsThreshold";
   private static final ConfigDef.Type MERGE_INTERVAL_MS_TYPE =              ConfigDef.Type.LONG;
   public static final long MERGE_INTERVAL_MS_DEFAULT =                     60_000L;
   private static final ConfigDef.Validator MERGE_INTERVAL_MS_VALIDATOR =   ConfigDef.LambdaValidator.with(
@@ -306,10 +394,11 @@ public class BigQuerySinkConfig extends AbstractConfig {
   );
   private static final ConfigDef.Importance MERGE_INTERVAL_MS_IMPORTANCE = ConfigDef.Importance.LOW;
   private static final String MERGE_INTERVAL_MS_DOC =
-      "How often (in milliseconds) to perform a merge flush, if upsert/delete is enabled. Can be "
-      + "set to -1 to disable periodic flushing.";
+      "How often (in milliseconds) to perform a merge flush, if upsert/delete is enabled. Can be set to -1" +
+              " to disable periodic flushing. Either " +MERGE_INTERVAL_MS_CONFIG + " or "
+              + MERGE_RECORDS_THRESHOLD_CONFIG + ", or both must be enabled.\nThis should not be set to less" +
+              " than 10 seconds. A validation would be introduced in a future release to this effect.";
 
-  public static final String MERGE_RECORDS_THRESHOLD_CONFIG =                    "mergeRecordsThreshold";
   private static final ConfigDef.Type MERGE_RECORDS_THRESHOLD_TYPE =             ConfigDef.Type.LONG;
   public static final long MERGE_RECORDS_THRESHOLD_DEFAULT =                     -1;
   private static final ConfigDef.Validator MERGE_RECORDS_THRESHOLD_VALIDATOR =   ConfigDef.LambdaValidator.with(
@@ -330,7 +419,8 @@ public class BigQuerySinkConfig extends AbstractConfig {
   private static final ConfigDef.Importance MERGE_RECORDS_THRESHOLD_IMPORTANCE = ConfigDef.Importance.LOW;
   private static final String MERGE_RECORDS_THRESHOLD_DOC =
       "How many records to write to an intermediate table before performing a merge flush, if " 
-      + "upsert/delete is enabled. Can be set to -1 to disable record count-based flushing.";
+      + "upsert/delete is enabled. Can be set to -1 to disable record count-based flushing. Either "
+              + MERGE_INTERVAL_MS_CONFIG + " or " + MERGE_RECORDS_THRESHOLD_CONFIG + ", or both must be enabled.";
 
   public static final String THREAD_POOL_SIZE_CONFIG =                  "threadPoolSize";
   private static final ConfigDef.Type THREAD_POOL_SIZE_TYPE =           ConfigDef.Type.INT;
@@ -429,6 +519,12 @@ public class BigQuerySinkConfig extends AbstractConfig {
   private static final String BIGQUERY_CLUSTERING_FIELD_NAMES_DOC =
       "List of fields on which data should be clustered by in BigQuery, separated by commas";
 
+  public static final String CONVERT_DEBEZIUM_TIMESTAMP_TO_INTEGER_CONFIG = "convertDebeziumTimestampToInteger";
+  private static final ConfigDef.Type CONVERT_DEBEZIUM_TIMESTAMP_TO_INTEGER_TYPE = ConfigDef.Type.BOOLEAN;
+  private static final Boolean CONVERT_DEBEZIUM_TIMESTAMP_TO_INTEGER_DEFAULT = false;
+  private static final ConfigDef.Importance CONVERT_DEBEZIUM_TIMESTAMP_TO_INTEGER_IMPORTANCE =
+          ConfigDef.Importance.MEDIUM;
+
   public static final String TIME_PARTITIONING_TYPE_CONFIG = "timePartitioningType";
   private static final ConfigDef.Type TIME_PARTITIONING_TYPE_TYPE = ConfigDef.Type.STRING;
   public static final String TIME_PARTITIONING_TYPE_DEFAULT = TimePartitioning.Type.DAY.name().toUpperCase();
@@ -467,6 +563,17 @@ public class BigQuerySinkConfig extends AbstractConfig {
   public static final List<String> CONNECTOR_RUNTIME_PROVIDER_TYPES = Stream.of("Confluent Platform", "Confluent Cloud")
           .collect(Collectors.toList());
 
+  public static final String MAX_RETRIES_CONFIG = "max.retries";
+  private static final ConfigDef.Type MAX_RETRIES_TYPE = ConfigDef.Type.INT;
+  private static final int MAX_RETRIES_DEFAULT = 10;
+  private static final ConfigDef.Validator MAX_RETRIES_VALIDATOR = ConfigDef.Range.atLeast(1);
+  private static final ConfigDef.Importance MAX_RETRIES_IMPORTANCE = ConfigDef.Importance.MEDIUM;
+  private static final String MAX_RETRIES_DOC = "The maximum number of times to retry on retriable errors before failing the task.";
+
+  public static final String ENABLE_RETRIES_CONFIG = "enableRetries";
+  private static final ConfigDef.Type ENABLE_RETRIES_TYPE = ConfigDef.Type.BOOLEAN;
+  public static final Boolean ENABLE_RETRIES_DEFAULT = true;
+  private static final ConfigDef.Importance ENABLE_RETRIES_IMPORTANCE = ConfigDef.Importance.MEDIUM;
   /**
    * Return the ConfigDef object used to define this config's fields.
    *
@@ -555,6 +662,13 @@ public class BigQuerySinkConfig extends AbstractConfig {
             SANITIZE_TOPICS_IMPORTANCE,
             SANITIZE_TOPICS_DOC
         ).define(
+            TOPIC2TABLE_MAP_CONFIG,
+            TOPIC2TABLE_MAP_TYPE,
+            TOPIC2TABLE_MAP_DEFAULT,
+            TOPIC2TABLE_MAP_VALIDATOR,
+            TOPIC2TABLE_MAP_IMPORTANCE,
+            TOPIC2TABLE_MAP_DOC
+          ).define(
             SANITIZE_FIELD_NAME_CONFIG,
             SANITIZE_FIELD_NAME_TYPE,
             SANITIZE_FIELD_NAME_DEFAULT,
@@ -747,11 +861,47 @@ public class BigQuerySinkConfig extends AbstractConfig {
             BIGQUERY_PARTITION_EXPIRATION_VALIDATOR,
             BIGQUERY_PARTITION_EXPIRATION_IMPORTANCE,
             BIGQUERY_PARTITION_EXPIRATION_DOC
+        ).define(
+            USE_STORAGE_WRITE_API_CONFIG,
+            USE_STORAGE_WRITE_API_TYPE,
+            USE_STORAGE_WRITE_API_DEFAULT,
+            USE_STORAGE_WRITE_API_IMPORTANCE,
+            USE_STORAGE_WRITE_API_DOC
+        ).define(
+            ENABLE_BATCH_MODE_CONFIG,
+            ENABLE_BATCH_MODE_TYPE,
+            ENABLE_BATCH_MODE_DEFAULT,
+            ENABLE_BATCH_MODE_IMPORTANCE,
+            ENABLE_BATCH_MODE_DOC
+        ).define(
+            COMMIT_INTERVAL_SEC_CONFIG,
+            COMMIT_INTERVAL_SEC_TYPE,
+            COMMIT_INTERVAL_SEC_DEFAULT,
+            COMMIT_INTERVAL_VALIDATOR,
+            COMMIT_INTERVAL_SEC_IMPORTANCE,
+            COMMIT_INTERVAL_SEC_DOC
+        ).define(
+            MAX_RETRIES_CONFIG,
+            MAX_RETRIES_TYPE,
+            MAX_RETRIES_DEFAULT,
+            MAX_RETRIES_VALIDATOR,
+            MAX_RETRIES_IMPORTANCE,
+            MAX_RETRIES_DOC
         ).defineInternal(
-                    CONNECTOR_RUNTIME_PROVIDER_CONFIG,
-                    CONNECTOR_RUNTIME_PROVIDER_TYPE,
-                    CONNECTOR_RUNTIME_PROVIDER_DEFAULT,
-                    CONNECTOR_RUNTIME_PROVIDER_IMPORTANCE
+            ENABLE_RETRIES_CONFIG,
+            ENABLE_RETRIES_TYPE,
+            ENABLE_RETRIES_DEFAULT,
+            ENABLE_RETRIES_IMPORTANCE
+        ).defineInternal(
+            CONVERT_DEBEZIUM_TIMESTAMP_TO_INTEGER_CONFIG,
+            CONVERT_DEBEZIUM_TIMESTAMP_TO_INTEGER_TYPE,
+            CONVERT_DEBEZIUM_TIMESTAMP_TO_INTEGER_DEFAULT,
+            CONVERT_DEBEZIUM_TIMESTAMP_TO_INTEGER_IMPORTANCE
+        ).defineInternal(
+            CONNECTOR_RUNTIME_PROVIDER_CONFIG,
+            CONNECTOR_RUNTIME_PROVIDER_TYPE,
+            CONNECTOR_RUNTIME_PROVIDER_DEFAULT,
+            CONNECTOR_RUNTIME_PROVIDER_IMPORTANCE
         );
   }
 
@@ -765,9 +915,12 @@ public class BigQuerySinkConfig extends AbstractConfig {
     // checking for those tables that the credentials are already valid.
     MULTI_PROPERTY_VALIDATIONS.add(new CredentialsValidator.BigQueryCredentialsValidator());
     MULTI_PROPERTY_VALIDATIONS.add(new CredentialsValidator.GcsCredentialsValidator());
+    MULTI_PROPERTY_VALIDATIONS.add(new CredentialsValidator.BigQueryStorageWriteApiCredentialsValidator());
     MULTI_PROPERTY_VALIDATIONS.add(new GcsBucketValidator());
     MULTI_PROPERTY_VALIDATIONS.add(new PartitioningModeValidator());
     MULTI_PROPERTY_VALIDATIONS.add(new PartitioningTypeValidator());
+    MULTI_PROPERTY_VALIDATIONS.add(new StorageWriteApiValidator());
+    MULTI_PROPERTY_VALIDATIONS.add(new StorageWriteApiValidator.StorageWriteApiBatchValidator());
     MULTI_PROPERTY_VALIDATIONS.add(new UpsertDeleteValidator.UpsertValidator());
     MULTI_PROPERTY_VALIDATIONS.add(new UpsertDeleteValidator.DeleteValidator());
   }
@@ -851,7 +1004,11 @@ public class BigQuerySinkConfig extends AbstractConfig {
    * @return a {@link RecordConverter} for BigQuery.
    */
   public RecordConverter<Map<String, Object>> getRecordConverter() {
-    return new BigQueryRecordConverter(getBoolean(CONVERT_DOUBLE_SPECIAL_VALUES_CONFIG));
+    return new BigQueryRecordConverter(
+            getBoolean(CONVERT_DOUBLE_SPECIAL_VALUES_CONFIG),
+            getBoolean(CONVERT_DEBEZIUM_TIMESTAMP_TO_INTEGER_CONFIG),
+            getBoolean(USE_STORAGE_WRITE_API_CONFIG)
+    );
   }
 
   /**
@@ -940,6 +1097,10 @@ public class BigQuerySinkConfig extends AbstractConfig {
     return parseTimePartitioningType(getString(TIME_PARTITIONING_TYPE_CONFIG));
   }
 
+  public Optional<Map<String, String>> getTopic2TableMap() {
+    return Optional.ofNullable(parseTopic2TableMapConfig(getString(TOPIC2TABLE_MAP_CONFIG)));
+  }
+
   private Optional<TimePartitioning.Type> parseTimePartitioningType(String rawPartitioningType) {
     if (rawPartitioningType == null) {
       throw new ConfigException(TIME_PARTITIONING_TYPE_CONFIG,
@@ -959,6 +1120,21 @@ public class BigQuerySinkConfig extends AbstractConfig {
           rawPartitioningType,
           "Must be one of " + String.join(", ", TIME_PARTITIONING_TYPES));
     }
+  }
+
+  private Map<String, String> parseTopic2TableMapConfig(String topic2TableMapString) {
+    if (topic2TableMapString.isEmpty()) {
+      return null;
+    }
+    Map<String, String> topic2TableMap = new HashMap<>();
+    // It's already validated, so we can just populate the map
+    for (String str : topic2TableMapString.split(",")) {
+      String[] tt = str.split(":");
+      String topic = tt[0].trim();
+      String table = tt[1].trim();
+      topic2TableMap.put(topic, table);
+    }
+    return topic2TableMap.isEmpty() ? null : topic2TableMap;
   }
 
   /**

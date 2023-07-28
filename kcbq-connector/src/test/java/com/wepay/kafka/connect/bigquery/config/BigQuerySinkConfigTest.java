@@ -27,11 +27,7 @@ import org.apache.kafka.common.config.ConfigException;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static com.wepay.kafka.connect.bigquery.config.BigQuerySinkConfig.CONNECTOR_RUNTIME_PROVIDER_CONFIG;
 import static com.wepay.kafka.connect.bigquery.config.BigQuerySinkConfig.CONNECTOR_RUNTIME_PROVIDER_DEFAULT;
@@ -231,5 +227,84 @@ public class BigQuerySinkConfigTest {
     configProperties.put(CONNECTOR_RUNTIME_PROVIDER_CONFIG, testKafkaProvider);
     BigQuerySinkConfig config = new BigQuerySinkConfig(configProperties);
     assertEquals(testKafkaProvider, config.getString(CONNECTOR_RUNTIME_PROVIDER_CONFIG));
+  }
+
+  @Test (expected = ConfigException.class)
+  public void testTopic2TableInvalidFormat() {
+    Map<String, String> configProperties = propertiesFactory.getProperties();
+    configProperties.put(BigQuerySinkConfig.TOPIC2TABLE_MAP_CONFIG, "topic:");
+    new BigQuerySinkConfig(configProperties);
+  }
+
+  @Test (expected = ConfigException.class)
+  public void testTopic2TableDuplicateTopic() {
+    Map<String, String> configProperties = propertiesFactory.getProperties();
+    configProperties.put(BigQuerySinkConfig.TOPIC2TABLE_MAP_CONFIG, "topic:table, topic:table2");
+    new BigQuerySinkConfig(configProperties);
+  }
+
+  @Test (expected = ConfigException.class)
+  public void testTopic2TableDuplicateTable() {
+    Map<String, String> configProperties = propertiesFactory.getProperties();
+    configProperties.put(BigQuerySinkConfig.TOPIC2TABLE_MAP_CONFIG, "topic:table, topic2:table");
+    new BigQuerySinkConfig(configProperties);
+  }
+
+  @Test (expected = ConfigException.class)
+  public void testTopic2TableSemicolonOnly() {
+    Map<String, String> configProperties = propertiesFactory.getProperties();
+    configProperties.put(BigQuerySinkConfig.TOPIC2TABLE_MAP_CONFIG, ":");
+    new BigQuerySinkConfig(configProperties);
+  }
+
+  @Test
+  public void testValidTopic2TableMap() {
+    Map<String, String> configProperties = propertiesFactory.getProperties();
+    configProperties.put(BigQuerySinkConfig.TOPIC2TABLE_MAP_CONFIG, "topic:table, topic2:table2");
+    BigQuerySinkConfig config = new BigQuerySinkConfig(configProperties);
+    Map<String, String> topic2TableMap = new HashMap<>();
+    topic2TableMap.put("topic", "table");
+    topic2TableMap.put("topic2", "table2");
+    assertEquals(topic2TableMap, config.getTopic2TableMap().get());
+  }
+
+  @Test
+  public void testTopic2TableEmptyString() {
+    Map<String, String> configProperties = propertiesFactory.getProperties();
+    configProperties.put(BigQuerySinkConfig.TOPIC2TABLE_MAP_CONFIG, "");
+    BigQuerySinkConfig config = new BigQuerySinkConfig(configProperties);
+    assertFalse(config.getTopic2TableMap().isPresent());
+  }
+
+  @Test
+  public void testTopic2TableCommaOnly() {
+    Map<String, String> configProperties = propertiesFactory.getProperties();
+    configProperties.put(BigQuerySinkConfig.TOPIC2TABLE_MAP_CONFIG, ",");
+    BigQuerySinkConfig config = new BigQuerySinkConfig(configProperties);
+    assertFalse(config.getTopic2TableMap().isPresent());
+  }
+
+  @Test(expected = ConfigException.class)
+  public void testInvalidMaxRetries() {
+    Map<String, String> badConfigProperties = propertiesFactory.getProperties();
+
+    badConfigProperties.put(
+            BigQuerySinkConfig.MAX_RETRIES_CONFIG,
+            "-1"
+    );
+
+    new BigQuerySinkConfig(badConfigProperties);
+  }
+
+  @Test(expected = ConfigException.class)
+  public void testInvalidCommitInterval() {
+    Map<String, String> badConfigProperties = propertiesFactory.getProperties();
+
+    badConfigProperties.put(
+            BigQuerySinkConfig.COMMIT_INTERVAL_SEC_CONFIG,
+            "0"
+    );
+
+    new BigQuerySinkConfig(badConfigProperties);
   }
 }
