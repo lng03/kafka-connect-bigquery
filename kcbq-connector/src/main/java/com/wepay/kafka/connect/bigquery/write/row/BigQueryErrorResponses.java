@@ -34,6 +34,7 @@ import java.util.function.Function;
 public class BigQueryErrorResponses {
 
   private static final int BAD_REQUEST_CODE = 400;
+  private static final int AUTHENTICATION_ERROR_CODE = 401;
   private static final int FORBIDDEN_CODE = 403;
   private static final int NOT_FOUND_CODE = 404;
   private static final int INTERNAL_SERVICE_ERROR_CODE = 500;
@@ -42,6 +43,7 @@ public class BigQueryErrorResponses {
 
   private static final String BAD_REQUEST_REASON = "badRequest";
   private static final String INVALID_REASON = "invalid";
+  private static final String INVALID_QUERY_REASON = "invalidQuery";
   private static final String NOT_FOUND_REASON = "notFound";
   private static final String QUOTA_EXCEEDED_REASON = "quotaExceeded";
   private static final String RATE_LIMIT_EXCEEDED_REASON = "rateLimitExceeded";
@@ -113,6 +115,25 @@ public class BigQueryErrorResponses {
         && error.getCause() instanceof IOException;
   }
 
+  public static boolean isCouldNotSerializeAccessError(BigQueryException exception) {
+    return BAD_REQUEST_CODE == exception.getCode()
+            && INVALID_QUERY_REASON.equals(exception.getReason())
+            && message(exception.getError()).startsWith("Could not serialize access to");
+  }
+
+  /**
+   * Returns whether the error code and the description string match to authentication errors.
+   * See also <a href="https://cloud.google.com/bigquery/docs/error-messages#autherrors">here</a>.
+   */
+  public static boolean isAuthenticationError(BigQueryException error) {
+    String err = error.toString();
+    return ((err.contains(String.valueOf(BAD_REQUEST_CODE))) &&
+            (err.contains("invalid_request") || err.contains("invalid_client") || err.contains("invalid_grant") ||
+             err.contains("unauthorized_client") || err.contains("unsupported_grant_type")))
+            ||
+            err.contains(String.valueOf(AUTHENTICATION_ERROR_CODE));
+  }
+
   public static boolean isUnrecognizedFieldError(BigQueryError error) {
     return INVALID_REASON.equals(reason(error))
         && message(error).startsWith("no such field: ");
@@ -120,7 +141,7 @@ public class BigQueryErrorResponses {
 
   public static boolean isMissingRequiredFieldError(BigQueryError error) {
     return INVALID_REASON.equals(reason(error))
-        && message(error).startsWith("Missing required field: ");
+        && message(error).startsWith("Missing required field");
   }
 
   public static boolean isStoppedError(BigQueryError error) {

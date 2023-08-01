@@ -343,7 +343,6 @@ public class GCSToBQLoadRunnable implements Runnable {
       }
       // Issue a batch delete api call
       List<Boolean> resultList = storage.delete(blobIdsToDelete);
-
       // Filter the blobs we couldn't delete from the list of deletable blobs
       for (int i = 0; i < numberOfBlobs; i++) {
         if (!resultList.get(i)) {
