@@ -290,6 +290,8 @@ public class BigQuerySinkTask extends SinkTask {
         try {
           tableWriterBuilders.get(table).addRow(record, table.getBaseTableId());
         } catch (ConversionConnectException ex) {
+          logger.error("Exception from tableWriterBuilders {}", ex.getMessage());
+          ex.printStackTrace();
           // Send records to DLQ in case of ConversionConnectException
           if (errantRecordHandler.getErrantRecordReporter() != null) {
             errantRecordHandler.sendRecordsToDLQ(Collections.singleton(record), ex);
